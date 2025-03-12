@@ -123,20 +123,29 @@ export function createDiscogsClient() {
           return response;
         },
         async (error) => {
+          // Handle 401 authentication errors by falling back to API key
+          if (error.response && error.response.status === 401) {
+            console.error('OAuth authentication failed, using API key fallback');
+            // Let the caller handle it by throwing the error
+            // The searchDiscogs function will catch this and retry with the API key client
+            throw error;
+          }
+          
           // Handle rate limit errors (429)
           if (error.response && error.response.status === 429) {
             consecutiveRateLimitErrors++;
             console.log(`Rate limit exceeded. Consecutive errors: ${consecutiveRateLimitErrors}`);
             
-            // If we keep hitting rate limits, fall back to API key
+            // If we keep hitting rate limits too many times, just give up
             if (consecutiveRateLimitErrors >= MAX_CONSECUTIVE_RATE_LIMIT_ERRORS) {
-              console.log('Too many consecutive rate limit errors. Falling back to API key authentication.');
-              throw error; // Let the caller handle it
+              console.log('Too many consecutive rate limit errors. Giving up.');
+              error.isRateLimitFatal = true;
+              throw error;
             }
             
             // Get retry-after header or use default
             const retryAfter = parseInt(error.response.headers['retry-after'] || '60', 10);
-            const waitTime = Math.min(60, Math.max(5, retryAfter)) * 1000; // Between 5-60 seconds
+            const waitTime = Math.min(60, Math.max(10, retryAfter)) * 1000; // Between 10-60 seconds
             
             console.log(`Rate limited. Waiting ${waitTime/1000} seconds before retrying.`);
             
@@ -618,10 +627,16 @@ export function createDiscogsClientWithApiKey() {
   
   console.log('Creating Discogs client with API key only (OAuth bypass)');
   
-  // Fix: Encode consumer key and secret to prevent invalid characters
-  const consumerKey = encodeURIComponent(apiConfig.DISCOGS_CONSUMER_KEY);
-  const consumerSecret = encodeURIComponent(apiConfig.DISCOGS_CONSUMER_SECRET);
-  const authHeader = `Discogs key=${consumerKey}, secret=${consumerSecret}`;
+  // Get credentials
+  const consumerKey = apiConfig.DISCOGS_CONSUMER_KEY;
+  const consumerSecret = apiConfig.DISCOGS_CONSUMER_SECRET;
+  
+  // Log the first few characters of credentials to verify they exist (don't log the full credentials)
+  console.log('API Key available:', consumerKey ? `${consumerKey.substring(0, 3)}...` : 'missing');
+  console.log('API Secret available:', consumerSecret ? `${consumerSecret.substring(0, 3)}...` : 'missing');
+  
+  // Create auth header using token format (preferred by Discogs)
+  const authHeader = `Discogs token=${consumerKey}`;
   
   const client = axios.create({
     baseURL: 'https://api.discogs.com',
@@ -637,7 +652,10 @@ export function createDiscogsClientWithApiKey() {
   let consecutiveRateLimitErrors = 0;
   const MAX_CONSECUTIVE_RATE_LIMIT_ERRORS = 3;
   
-  // Add response interceptor to handle rate limit errors
+  // Flag to track if we've tried the alternative auth format
+  let triedAlternativeAuth = false;
+  
+  // Add response interceptor to handle rate limit errors and auth failures
   client.interceptors.response.use(
     (response) => {
       // Reset consecutive error counter on success
@@ -659,6 +677,14 @@ export function createDiscogsClientWithApiKey() {
       return response;
     },
     async (error) => {
+      // Handle 401 authentication errors by falling back to API key
+      if (error.response && error.response.status === 401) {
+        console.error('OAuth authentication failed, using API key fallback');
+        // Let the caller handle it by throwing the error
+        // The searchDiscogs function will catch this and retry with the API key client
+        throw error;
+      }
+      
       // Handle rate limit errors (429)
       if (error.response && error.response.status === 429) {
         consecutiveRateLimitErrors++;

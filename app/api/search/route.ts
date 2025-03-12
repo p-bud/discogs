@@ -548,57 +548,32 @@ export async function POST(request: Request) {
           }
         }
       } catch (error: any) {
-        // If the main search times out, try an emergency fallback
-        if (error.message && error.message.includes('timed out')) {
-          console.log('SERVER: Search timed out, attempting emergency fallback');
-          try {
-            // Try one more quick search with a shorter timeout and simplified criteria
-            const emergencyFilters = { 
-              genre: 'Rock',
-              style: '',
-              format: '',
-              country: '',
-              yearRange: [],
-              sortByRarity: true
-            };
-            
-            const emergencyTimeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error('Emergency search timed out')), 30000);
-            });
-            
-            const emergencySearchPromise = searchDiscogs(emergencyFilters, randomSeed);
-            const emergencyResults = await Promise.race([emergencySearchPromise, emergencyTimeoutPromise]) as any[];
-            
-            if (emergencyResults && emergencyResults.length > 0) {
-              console.log(`SERVER: Found ${emergencyResults.length} results with emergency search`);
-              // Process just a few results to be fast
-              const limitedResults = emergencyResults.slice(0, 10);
-              const resultsWithRarity = await searchDatabaseWithRarity(limitedResults, true);
-              
-              return NextResponse.json({ 
-                success: true, 
-                results: resultsWithRarity,
-                totalFound: emergencyResults.length,
-                emergency: true,
-                offlineMode: false,
-                message: 'Search timed out, but we found some records for you anyway.'
-              });
-            }
-          } catch (emergencyError) {
-            console.error('SERVER: Emergency search also failed:', emergencyError);
-            return NextResponse.json({ 
-              success: false, 
-              error: 'Search timed out. Please try a simpler search or try again later.',
-              results: [],
-              totalFound: 0
-            });
+        console.error('SERVER: Search API error:', error);
+        
+        let errorMessage = 'Search failed: ';
+        
+        // Check for Axios error with response
+        if (error.isAxiosError && error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          
+          console.error(`SERVER: Axios error ${status}:`, data);
+          
+          // Provide specific guidance for common errors
+          if (status === 401) {
+            errorMessage += `Authentication failed (401): Check that DISCOGS_CONSUMER_KEY and DISCOGS_CONSUMER_SECRET environment variables are correctly set in your Vercel project settings.`;
+          } else if (status === 429) {
+            errorMessage += `Rate limit exceeded (429): The Discogs API rate limit has been reached. Please try again later.`;
+          } else {
+            errorMessage += `API error ${status}: ${JSON.stringify(data)}`;
           }
+        } else {
+          errorMessage += error.message || 'Unknown error';
         }
         
-        console.error('SERVER: Search error:', error);
-        return NextResponse.json({ 
-          success: false, 
-          error: `Search failed: ${error.message || 'Unknown error'}`,
+        return NextResponse.json({
+          success: false,
+          error: errorMessage,
           results: [],
           totalFound: 0
         });

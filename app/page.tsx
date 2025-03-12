@@ -82,73 +82,70 @@ export default function Home() {
   // Keep track of the last search filters for retry functionality
   const lastSearchFilters = useRef<SearchFiltersType | null>(null);
   
-  const handleSearch = async (filters: SearchFiltersType) => {
-    // Save the filters for retry functionality
-    lastSearchFilters.current = filters;
+  // Function to handle search error display
+  const handleSearchError = (error: any) => {
+    console.error('Search error:', error);
     
+    // Extract the error message
+    let errorMessage = 'An error occurred while searching';
+    
+    if (error.response && error.response.data) {
+      // If we have an API response with data
+      const responseData = error.response.data;
+      if (responseData.error) {
+        errorMessage = responseData.error;
+      }
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    // Set loading state to false and display error
+    setIsLoading(false);
+    setSearchError(errorMessage);
+    setResults([]);
+  };
+  
+  // Function to perform the search
+  const handleSearch = async (filters: SearchFiltersType) => {
     setIsLoading(true);
     setSearchError(null);
     setResults([]);
     setSearchStage('Searching Discogs database...');
     
-    // Create an AbortController for the search timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      console.log('Client-side search timeout triggered after 30 seconds');
-      controller.abort();
-    }, 30000); // Reduce timeout to 30 seconds for faster feedback
-    
     try {
-      // Call our search API endpoint
-      console.log('Searching Discogs with filters:', filters);
-      
-      // Create a timeout to update the search stage message after 5 seconds
-      const stageUpdateTimeout = setTimeout(() => {
-        setSearchStage('Analyzing record rarity data... (this may take up to a minute)');
-        
-        // Add another update after 15 seconds to show the search is still processing
-        setTimeout(() => {
-          setSearchStage('Still processing... Discogs API may be slow right now. Will timeout in 15 seconds if no response.');
-        }, 15000);
-      }, 5000);
-      
-      const response = await axios.post('/api/search', filters, {
-        signal: controller.signal
-      });
-      
-      // Clear the timeouts when the response is received
-      clearTimeout(stageUpdateTimeout);
-      clearTimeout(timeoutId);
+      const response = await axios.post('/api/search', filters);
       
       if (response.data.success) {
-        if (response.data.results.length > 0) {
-          setResults(response.data.results);
-          setTotalResults(response.data.totalFound || 0);
-          setPoolSize(response.data.poolSize || 0);
-        }
+        setResults(response.data.results || []);
+        setTotalResults(response.data.totalFound || 0);
+        setPoolSize(response.data.poolSize || 0);
         
-        // Show message if no results found or if there's an API error
-        if (response.data.error) {
-          setSearchError(response.data.error);
-        } else if (response.data.results.length === 0) {
-          setSearchError('No results found matching your criteria. Try adjusting your search filters.');
+        // If the search is successful, update the URL
+        if (typeof window !== 'undefined') {
+          const searchParams = new URLSearchParams();
+          if (filters.artist) searchParams.set('artist', filters.artist);
+          if (filters.album) searchParams.set('album', filters.album);
+          if (filters.genre) searchParams.set('genre', filters.genre);
+          if (filters.style) searchParams.set('style', filters.style);
+          if (filters.format) searchParams.set('format', filters.format);
+          if (filters.country) searchParams.set('country', filters.country);
+          if (filters.yearMin) searchParams.set('yearMin', filters.yearMin.toString());
+          if (filters.yearMax) searchParams.set('yearMax', filters.yearMax.toString());
+          
+          // Replace the current URL with the search params to make it bookmarkable
+          const url = `${window.location.pathname}?${searchParams.toString()}`;
+          window.history.replaceState({}, '', url);
         }
       } else {
-        setSearchError('Search failed: ' + (response.data.error || 'Unknown error'));
+        // Handle unsuccessful search with explicit error
+        setSearchError(response.data.error || 'Search failed, please try again');
+        setResults([]);
       }
     } catch (error: any) {
-      clearTimeout(timeoutId);
-      console.error('Error searching records:', error);
-      
-      if (error.name === 'AbortError' || error.name === 'CanceledError') {
-        setSearchError('Search timed out after 60 seconds. The Discogs API may be slow or rate limited right now.');
-      } else if (error.response?.status === 429) {
-        setSearchError('Discogs API rate limit exceeded. Please wait a minute before trying again.');
-      } else {
-        setSearchError(`An error occurred while searching: ${error.message || 'Unknown error'}. Please try again.`);
-      }
+      handleSearchError(error);
     } finally {
       setIsLoading(false);
+      setSearchStage('');
     }
   };
 
