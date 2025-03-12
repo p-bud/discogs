@@ -83,7 +83,17 @@ export function createDiscogsClient() {
         
         // Generate the header
         const authHeader = oauth.toHeader(oauthParams);
-        config.headers.Authorization = authHeader.Authorization;
+        
+        // Fix: Ensure no invalid characters in the Authorization header
+        // We need to use a string value rather than directly assigning the object value
+        if (authHeader && authHeader.Authorization) {
+          config.headers.Authorization = String(authHeader.Authorization);
+          
+          // Additional debugging for authentication issues
+          console.log('Generated Authorization header (length):', config.headers.Authorization.length);
+        } else {
+          console.warn('Failed to generate valid Authorization header');
+        }
         
         // Add debugging for rate limit issue diagnostics
         console.log('Making authenticated request to:', fullUrl);
@@ -607,7 +617,11 @@ export function createDiscogsClientWithApiKey() {
   const { apiConfig } = require('./auth');
   
   console.log('Creating Discogs client with API key only (OAuth bypass)');
-  const authHeader = `Discogs key=${apiConfig.DISCOGS_CONSUMER_KEY}, secret=${apiConfig.DISCOGS_CONSUMER_SECRET}`;
+  
+  // Fix: Encode consumer key and secret to prevent invalid characters
+  const consumerKey = encodeURIComponent(apiConfig.DISCOGS_CONSUMER_KEY);
+  const consumerSecret = encodeURIComponent(apiConfig.DISCOGS_CONSUMER_SECRET);
+  const authHeader = `Discogs key=${consumerKey}, secret=${consumerSecret}`;
   
   const client = axios.create({
     baseURL: 'https://api.discogs.com',

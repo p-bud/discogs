@@ -37,9 +37,16 @@ A web application that helps vinyl collectors explore the Discogs database, anal
 3. Configure environment variables:
    Create a `.env.local` file with the following variables:
    ```
-   DISCOGS_API_KEY=your_api_key
-   DISCOGS_API_SECRET=your_api_secret
+   # Required for Discogs API OAuth
+   DISCOGS_CONSUMER_KEY=your_discogs_api_key
+   DISCOGS_CONSUMER_SECRET=your_discogs_api_secret
+   
+   # Other application settings
+   NEXT_PUBLIC_API_URL=http://localhost:3000/api
    ```
+   
+   > **Note**: The variable names must be exactly `DISCOGS_CONSUMER_KEY` and `DISCOGS_CONSUMER_SECRET` for OAuth to work properly.
+
 4. Run the development server:
    ```
    npm run dev
@@ -53,3 +60,17 @@ A web application that helps vinyl collectors explore the Discogs database, anal
 ## License
 
 MIT 
+
+### Deploying to Vercel
+
+When deploying to Vercel, make sure to:
+
+1. Add the required environment variables in your Vercel project settings:
+   - `DISCOGS_CONSUMER_KEY`
+   - `DISCOGS_CONSUMER_SECRET`
+
+2. Set up your Discogs API application settings:
+   - Go to [Discogs Developer Settings](https://www.discogs.com/settings/developers)
+   - For your application, set the OAuth callback URL to:
+     `https://your-vercel-domain.vercel.app/api/auth/callback`
+   - Make sure the callback URL matches exactly to avoid authentication errors 
