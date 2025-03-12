@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=VT323&display=swap');
+
+@layer base {
+  body {
+    @apply bg-minimal-white text-minimal-black font-sans;
+  }
+  h1 {
+    @apply text-3xl font-sans font-bold mb-4 text-minimal-black;
+  }
+  h2 {
+    @apply text-2xl font-sans font-semibold mb-3 text-minimal-black;
+  }
+  h3 {
+    @apply text-xl font-sans font-medium mb-2 text-minimal-black;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 font-sans font-medium rounded transition-colors duration-200 ease-in-out;
+  }
+  .btn-primary {
+    @apply bg-minimal-accent text-minimal-white hover:bg-minimal-accent-dark;
+  }
+  .btn-secondary {
+    @apply bg-minimal-gray-200 text-minimal-gray-800 hover:bg-minimal-gray-300;
+  }
+  .card {
+    @apply bg-minimal-white border border-minimal-gray-200 rounded-lg p-4 shadow;
+  }
+  .input {
+    @apply w-full p-2 bg-minimal-white border border-minimal-gray-300 rounded text-minimal-black font-sans focus:outline-none focus:ring-2 focus:ring-minimal-accent focus:border-minimal-accent;
+  }
+  .select {
+    @apply w-full p-2 pr-8 bg-minimal-white border border-minimal-gray-300 rounded text-minimal-black font-sans focus:outline-none focus:ring-2 focus:ring-minimal-accent focus:border-minimal-accent appearance-none;
+  }
+  .label {
+    @apply block text-sm font-medium text-minimal-gray-700 mb-1;
+  }
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  .badge-success {
+    @apply bg-minimal-success bg-opacity-10 text-minimal-success;
+  }
+  .badge-error {
+    @apply bg-minimal-error bg-opacity-10 text-minimal-error;
+  }
+  .badge-warning {
+    @apply bg-minimal-warning bg-opacity-10 text-minimal-warning;
+  }
+  .badge-info {
+    @apply bg-minimal-accent bg-opacity-10 text-minimal-accent;
+  }
+  
+  /* Legacy retro styles kept for backward compatibility */
+  .retro-display {
+    @apply bg-retro-black border-2 border-retro-blue-light p-2 text-retro-green font-pixel;
+  }
+  .retro-header {
+    @apply bg-retro-blue border-b-2 border-retro-blue-dark flex justify-between items-center p-4;
+  }
+  .retro-footer {
+    @apply bg-retro-blue border-t-2 border-retro-blue-dark p-4 text-center;
+  }
+  .retro-tab {
+    @apply px-4 py-2 bg-retro-blue text-retro-white border-2 border-retro-blue-dark font-pixel uppercase;
+  }
+  .retro-tab-active {
+    @apply bg-retro-blue-dark text-retro-white;
+  }
+  .retro-control {
+    @apply flex items-center justify-between bg-retro-blue border-2 border-retro-blue-dark p-2;
+  }
+  .retro-control-label {
+    @apply font-pixel uppercase text-retro-white;
+  }
+  .retro-control-value {
+    @apply font-pixel bg-retro-white px-2 text-retro-black border border-retro-blue-dark;
+  }
+  .retro-button {
+    @apply px-2 py-1 bg-retro-blue border-2 border-retro-blue-dark font-pixel uppercase hover:bg-retro-blue-light;
+  }
+  .retro-button-highlight {
+    @apply px-2 py-1 bg-retro-orange border-2 border-retro-blue-dark font-pixel uppercase hover:bg-retro-yellow;
+  }
+  .retro-waveform {
+    @apply bg-retro-black p-2 border-2 border-retro-blue-light;
+  }
+}
+
+/* PicNic Font Styling */
+.font-picnic {
+  font-family: var(--font-picnic);
+}
+
+.text-picnic {
+  font-family: var(--font-picnic);
+}
+
+/* Add a heading class that uses the PicNic font */
+.heading-picnic {
+  font-family: var(--font-picnic);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+/* You can create size variants */
+.text-picnic-lg {
+  font-family: var(--font-picnic);
+  font-size: 2rem;
+}
+
+.text-picnic-xl {
+  font-family: var(--font-picnic);
+  font-size: 3rem;
+} 
