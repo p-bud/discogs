@@ -89,8 +89,21 @@ export async function getUserCollection(username: string): Promise<CollectionIte
     }
     
     // Import the discogs module dynamically
-    const discogs = await import('./discogs');
-    const discogsClient = discogs.createDiscogsClient();
+    let discogs;
+    try {
+      discogs = await import('./discogs');
+    } catch (importError) {
+      console.error('Error importing discogs module:', importError);
+      throw new Error('Failed to initialize Discogs client. Please try again later.');
+    }
+    
+    let discogsClient;
+    try {
+      discogsClient = discogs.createDiscogsClient();
+    } catch (clientError) {
+      console.error('Error creating Discogs client:', clientError);
+      throw new Error('Failed to create Discogs client. Please check authentication and try again.');
+    }
     
     console.log(`Fetching 50 most recent collection additions for ${username}`);
     

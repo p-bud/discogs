@@ -36,80 +36,122 @@ export default function CollectionAnalysis({ username }: CollectionAnalysisProps
     }, 20000);
 
     try {
-      const response = await fetch(`/api/collection?username=${encodeURIComponent(username)}`, {
-        // Set a longer timeout
-        signal: AbortSignal.timeout(120000) // 120 second timeout (increased from 60)
-      });
-      
-      // Clear the message timeouts
-      clearTimeout(messageTimeout);
-      clearTimeout(messageTimeout2);
+      // Wrap the entire fetch process in a try-catch
+      try {
+        const response = await fetch(`/api/collection?username=${encodeURIComponent(username)}`, {
+          // Set a longer timeout
+          signal: AbortSignal.timeout(120000) // 120 second timeout (increased from 60)
+        });
+        
+        // Clear the message timeouts
+        clearTimeout(messageTimeout);
+        clearTimeout(messageTimeout2);
 
-      // Check if the request was aborted due to timeout
-      if (response.status === 0) {
-        throw new Error("Request timed out. Discogs API may be experiencing issues.");
-      }
+        // Check if the request was aborted due to timeout
+        if (response.status === 0) {
+          throw new Error("Request timed out. Discogs API may be experiencing issues.");
+        }
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Check for rate limit error
-        if (response.status === 429) {
-          // Get retry after value
-          const retryAfter = parseInt(response.headers.get('retry-after') || data.retryAfter || '60', 10);
-          const retryAfterSec = Math.min(60, Math.max(10, retryAfter)); // Between 10-60 seconds
-          
-          // Increment retry count
-          const newRetryCount = retryCount + 1;
-          setRetryCount(newRetryCount);
-          
-          // If we've tried less than 3 times, retry automatically
-          if (newRetryCount < 3) {
-            setRetryCountdown(retryAfterSec);
-            setLoadingMessage(
-              `Rate limit reached. Automatically retrying in ${retryAfterSec} seconds (attempt ${newRetryCount}/3)...`
-            );
-            
-            // Set up countdown
-            const countdownInterval = setInterval(() => {
-              setRetryCountdown(prev => {
-                if (prev <= 1) {
-                  clearInterval(countdownInterval);
-                  return 0;
-                }
-                return prev - 1;
-              });
-            }, 1000);
-            
-            // Set a timeout to retry
-            const timeout = setTimeout(() => {
-              clearInterval(countdownInterval);
-              setRetryTimeout(null);
-              fetchCollection();
-            }, retryAfterSec * 1000);
-            
-            if (retryTimeout) {
-              clearTimeout(retryTimeout);
-            }
-            setRetryTimeout(timeout);
-            return;
-          } else {
-            // After 3 retries, give up
-            throw new Error(
-              `Discogs API rate limit exceeded. Please try again later. ${data.details || ''}`
-            );
+        // Check the content type before parsing as JSON
+        const contentType = response.headers.get('content-type');
+        let data;
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            data = await response.json();
+          } catch (parseError) {
+            console.error('Error parsing JSON response:', parseError);
+            throw new Error('Invalid response format from server. Please try again later.');
           }
+        } else {
+          // Handle non-JSON responses
+          const textResponse = await response.text();
+          console.error('Received non-JSON response:', textResponse);
+          throw new Error(`Server returned invalid response format: ${textResponse.substring(0, 100)}...`);
+        }
+
+        if (!response.ok) {
+          // Check for rate limit error
+          if (response.status === 429) {
+            // Get retry after value
+            const retryAfter = parseInt(response.headers.get('retry-after') || data.retryAfter || '60', 10);
+            const retryAfterSec = Math.min(60, Math.max(10, retryAfter)); // Between 10-60 seconds
+            
+            // Increment retry count
+            const newRetryCount = retryCount + 1;
+            setRetryCount(newRetryCount);
+            
+            // If we've tried less than 3 times, retry automatically
+            if (newRetryCount < 3) {
+              setRetryCountdown(retryAfterSec);
+              setLoadingMessage(
+                `Rate limit reached. Automatically retrying in ${retryAfterSec} seconds (attempt ${newRetryCount}/3)...`
+              );
+              
+              // Set up countdown
+              const countdownInterval = setInterval(() => {
+                setRetryCountdown(prev => {
+                  if (prev <= 1) {
+                    clearInterval(countdownInterval);
+                    return 0;
+                  }
+                  return prev - 1;
+                });
+              }, 1000);
+              
+              // Set a timeout to retry
+              const timeout = setTimeout(() => {
+                clearInterval(countdownInterval);
+                setRetryTimeout(null);
+                fetchCollection();
+              }, retryAfterSec * 1000);
+              
+              if (retryTimeout) {
+                clearTimeout(retryTimeout);
+              }
+              setRetryTimeout(timeout);
+              return;
+            } else {
+              // After 3 retries, give up
+              throw new Error(
+                `Discogs API rate limit exceeded. Please try again later. ${data.details || ''}`
+              );
+            }
+          }
+          
+          throw new Error(data.error || 'Failed to fetch collection');
+        }
+
+        // Successful response
+        setCollection(data.collection || []);
+        setStats(data.stats || null);
+        
+        // Reset retry count on success
+        setRetryCount(0);
+      } catch (err: any) {
+        // Clear the message timeouts
+        clearTimeout(messageTimeout);
+        clearTimeout(messageTimeout2);
+        
+        // Format a user-friendly error message
+        let errorMessage = err.message || 'An error occurred while fetching your collection';
+        let isTimeout = false;
+        
+        // Add more context for specific errors
+        if (errorMessage.includes('rate limit')) {
+          errorMessage = `Discogs API rate limit exceeded. The API only allows a limited number of requests per minute. Please try again in a few minutes.`;
+        } else if (errorMessage.includes('timed out') || errorMessage.includes('timeout')) {
+          isTimeout = true;
+          errorMessage = `Request timed out. The Discogs API might be experiencing high traffic or your 50 most recent additions might contain releases with a lot of data. Please try again.`;
+        } else if (errorMessage.includes('No releases found')) {
+          errorMessage = `No releases found in collection for ${username}. Make sure you've entered the correct Discogs username and have records in your collection.`;
+        } else if (errorMessage.includes('network') || err.name === 'FetchError') {
+          errorMessage = `Network error. Please check your internet connection and try again.`;
         }
         
-        throw new Error(data.error || 'Failed to fetch collection');
+        setError(errorMessage);
+        setRetryCount(isTimeout ? retryCount + 1 : 0); // Increment retry count only for timeouts
       }
-
-      // Successful response
-      setCollection(data.collection || []);
-      setStats(data.stats || null);
-      
-      // Reset retry count on success
-      setRetryCount(0);
     } catch (err: any) {
       // Clear the message timeouts
       clearTimeout(messageTimeout);
