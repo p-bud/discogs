@@ -10,8 +10,10 @@ const releaseCache: Record<string, { data: any, timestamp: number }> = {};
 // Cache expiration time (1 hour)
 const CACHE_EXPIRATION = 60 * 60 * 1000;
 
-// Maximum releases to process in one batch
-const BATCH_SIZE = 10;
+// Constants for API requests
+const BATCH_SIZE = 5; // Process 5 releases at a time to avoid rate limits
+const MAX_ITEMS = 30; // Maximum number of items to process to avoid timeouts
+const API_DELAY_MS = 1000; // 1 second delay between API requests
 
 // Types
 export interface CollectionItem {
@@ -135,8 +137,14 @@ export async function getUserCollection(username: string): Promise<CollectionIte
         
         const response = await rateLimit(getCollection);
         
-        // We're only fetching a single page of the 50 most recent items, so pagination is disabled
+        // We're only fetching a single page of the most recent items
         let allReleases = response.data.releases || [];
+        
+        // Limit to MAX_ITEMS to stay within function timeout limits
+        if (allReleases.length > MAX_ITEMS) {
+          console.log(`Limiting releases from ${allReleases.length} to ${MAX_ITEMS} to avoid timeout`);
+          allReleases = allReleases.slice(0, MAX_ITEMS);
+        }
         
         // Convert the releases to our application's format
         // First, get the community data for each release (have/want counts)
@@ -146,7 +154,7 @@ export async function getUserCollection(username: string): Promise<CollectionIte
         const processedReleases: CollectionItem[] = [];
         
         // Smaller batch size to avoid rate limits
-        const effectiveBatchSize = Math.min(BATCH_SIZE, 5); 
+        const effectiveBatchSize = BATCH_SIZE; 
         
         // Process releases in batches
         for (let i = 0; i < allReleases.length; i += effectiveBatchSize) {
@@ -155,46 +163,8 @@ export async function getUserCollection(username: string): Promise<CollectionIte
             
             console.log(`Processing batch ${i/effectiveBatchSize + 1}/${Math.ceil(allReleases.length/effectiveBatchSize)}`);
             
-            // Process a batch concurrently with individual rate limiting on each request
-            const batchResults = await Promise.all(
-              batchReleases.map(async (release: any) => {
-                try {
-                  // Get detailed release info to get have/want counts
-                  const releaseDetails = await getReleaseCommunityData(release.id);
-                  
-                  // Calculate rarity score (want/have ratio)
-                  const haveCount = releaseDetails.community?.have || 0;
-                  const wantCount = releaseDetails.community?.want || 0;
-                  const rarityScore = haveCount > 0 ? (wantCount / haveCount) : 0;
-                  
-                  return {
-                    id: release.id,
-                    title: release.basic_information?.title || 'Unknown',
-                    artist: release.basic_information?.artists?.[0]?.name || 'Unknown',
-                    year: release.basic_information?.year || '',
-                    format: release.basic_information?.formats?.map((f: any) => f.name) || [],
-                    coverImage: release.basic_information?.cover_image || '',
-                    haveCount,
-                    wantCount,
-                    rarityScore
-                  };
-                } catch (error: any) {
-                  // If we hit a rate limit on an individual release, use default values
-                  console.error(`Error processing release ${release.id}:`, error.message);
-                  return {
-                    id: release.id,
-                    title: release.basic_information?.title || 'Unknown',
-                    artist: release.basic_information?.artists?.[0]?.name || 'Unknown',
-                    year: release.basic_information?.year || '',
-                    format: release.basic_information?.formats?.map((f: any) => f.name) || [],
-                    coverImage: release.basic_information?.cover_image || '',
-                    haveCount: 0,
-                    wantCount: 0,
-                    rarityScore: 0
-                  };
-                }
-              })
-            );
+            // Process the batch to get community data and calculate rarity scores
+            const batchResults = await processReleaseBatch(batchReleases, discogsClient);
             
             processedReleases.push(...batchResults);
             
@@ -341,4 +311,56 @@ export function calculateCollectionStats(collection: CollectionItem[]): Collecti
     mostWanted: sortedByMostWanted.slice(0, 10), // Top 10 most wanted
     mostCollectible: sortedByCollectibility.slice(0, 10) // Top 10 most collectible
   };
-} 
+}
+
+// Process batch of releases and calculate rarity score
+const processReleaseBatch = async (batchReleases: any[], discogsClient: any): Promise<CollectionItem[]> => {
+  try {
+    console.log(`Processing batch of ${batchReleases.length} releases with community data`);
+    
+    // Process a batch concurrently with individual rate limiting on each request
+    const batchResults = await Promise.all(
+      batchReleases.map(async (release: any) => {
+        try {
+          // Get community data to calculate rarity score
+          const releaseDetails = await getReleaseCommunityData(release.id);
+          
+          // Calculate rarity score (want/have ratio)
+          const haveCount = releaseDetails.community?.have || 0;
+          const wantCount = releaseDetails.community?.want || 0;
+          const rarityScore = haveCount > 0 ? (wantCount / haveCount) : 0;
+          
+          return {
+            id: release.id,
+            title: release.basic_information?.title || 'Unknown',
+            artist: release.basic_information?.artists?.[0]?.name || 'Unknown',
+            year: release.basic_information?.year || '',
+            format: release.basic_information?.formats?.map((f: any) => f.name) || [],
+            coverImage: release.basic_information?.cover_image || '',
+            haveCount,
+            wantCount,
+            rarityScore
+          };
+        } catch (error: any) {
+          console.error(`Error processing release ${release.id}:`, error.message);
+          return {
+            id: release.id,
+            title: release.basic_information?.title || 'Unknown',
+            artist: release.basic_information?.artists?.[0]?.name || 'Unknown',
+            year: release.basic_information?.year || '',
+            format: release.basic_information?.formats?.map((f: any) => f.name) || [],
+            coverImage: release.basic_information?.cover_image || '',
+            haveCount: 0,
+            wantCount: 0,
+            rarityScore: 0
+          };
+        }
+      })
+    );
+    
+    return batchResults.filter(Boolean) as CollectionItem[];
+  } catch (error) {
+    console.error('Error processing release batch:', error);
+    throw error;
+  }
+}; 

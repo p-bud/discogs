@@ -1,112 +1,133 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { getUserCollection, calculateCollectionStats } from '../../utils/collection';
-import { isAuthenticated } from '../../utils/discogs';
+import { getUserCollection } from '../../utils/collection';
 
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic';
 
+// Maximum items to process to prevent timeouts
+const MAX_ITEMS = 30;
+
 /**
- * GET handler for collection endpoint
+ * API route to get a user's Discogs collection
  * Gets a user's Discogs collection and calculates rarity metrics
  */
-export async function GET(request: NextRequest): Promise<NextResponse> {
-  // Check if user is authenticated
+export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
-    if (!isAuthenticated()) {
-      return NextResponse.json(
-        { error: 'Authentication required to access collection data' },
-        { status: 401 }
-      );
+    const { searchParams } = new URL(req.url);
+    const username = searchParams.get('username');
+  
+    // Check for auth
+    const cookieStore = cookies();
+    const hasAuth = cookieStore.has('discogs_oauth_token') && cookieStore.has('discogs_oauth_token_secret');
+    
+    if (!hasAuth) {
+      return NextResponse.json({ error: 'Authentication required. Please login with Discogs first.' }, { status: 401 });
     }
     
+    if (!username) {
+      return NextResponse.json({ error: 'Username is required' }, { status: 400 });
+    }
+    
+    // Get the collection
     try {
-      // Get username from query parameter
-      const searchParams = request.nextUrl.searchParams;
-      const username = searchParams.get('username');
-      
-      if (!username) {
-        return NextResponse.json(
-          { error: 'Discogs username is required' },
-          { status: 400 }
-        );
-      }
-      
-      // Get the user's collection with rarity metrics
       const collection = await getUserCollection(username);
       
-      // Calculate collection statistics
-      const stats = calculateCollectionStats(collection);
+      // Check if the collection was limited due to size constraints
+      const isLimited = collection.length > 0 && collection.length <= MAX_ITEMS;
+
+      // Calculate comprehensive stats from the collection for all tabs
+      const stats = {
+        totalReleases: collection.length,
+        averageRarityScore: collection.reduce((sum, item) => sum + (item.rarityScore || 0), 0) / collection.length || 0,
+        
+        // For "Highest Ratio" tab
+        rarestItems: [...collection]
+          .sort((a, b) => (b.rarityScore || 0) - (a.rarityScore || 0))
+          .slice(0, 10),
+        
+        // For "Most Common" tab
+        mostCommonItems: [...collection]
+          .sort((a, b) => (a.rarityScore || 0) - (b.rarityScore || 0))
+          .slice(0, 10),
+        
+        // For "Fewest Haves" tab
+        fewestHaves: [...collection]
+          .sort((a, b) => (a.haveCount || 0) - (b.haveCount || 0))
+          .slice(0, 10),
+        
+        // For "Most Wanted" tab
+        mostWanted: [...collection]
+          .sort((a, b) => (b.wantCount || 0) - (a.wantCount || 0))
+          .slice(0, 10),
+        
+        // For "Most Collectible" tab
+        mostCollectible: [...collection]
+          .sort((a, b) => {
+            // Create a collectibility score that favors items with both high have and want counts
+            const aScore = ((a.haveCount || 0) * (a.wantCount || 0)) / 1000;
+            const bScore = ((b.haveCount || 0) * (b.wantCount || 0)) / 1000;
+            return bScore - aScore;
+          })
+          .slice(0, 10)
+      };
       
-      // Return both collection items and stats
-      return NextResponse.json({
-        collection,
-        stats
+      // Return the response
+      return NextResponse.json({ 
+        releases: collection,
+        stats,
+        limitedResults: isLimited
       });
+      
     } catch (error: any) {
-      console.error('Error fetching collection:', error);
+      console.error('Collection API error:', error);
       
       // Handle timeout errors
-      if (error.name === 'TimeoutError' || error.message?.includes('timeout') || error.code === 'ETIMEDOUT') {
-        return NextResponse.json(
-          { 
-            error: 'Request timed out while fetching collection data. The Discogs API might be experiencing high traffic.',
-            details: 'Try again later when the API might be less busy.'
-          },
-          { status: 504 }
-        );
+      if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
+        return NextResponse.json({ 
+          error: 'Request timed out. The Discogs API may be experiencing high traffic or the collection may be too large to process.', 
+          details: error.message
+        }, { status: 504 });
       }
       
       // Handle network errors
-      if (error.name === 'FetchError' || error.code === 'ECONNRESET' || error.message?.includes('network')) {
-        return NextResponse.json(
-          { 
-            error: 'Network error while connecting to Discogs API. Please check your connection.',
-            details: error.message || 'Connection issue'
-          },
-          { status: 503 }
-        );
+      if (error.name === 'FetchError' || error.message.includes('network')) {
+        return NextResponse.json({ 
+          error: 'Network error while connecting to Discogs. Please check your connection and try again.', 
+          details: error.message
+        }, { status: 503 });
       }
       
       // Handle rate limit errors
-      if (error.response && error.response.status === 429) {
-        return NextResponse.json(
-          { 
-            error: 'Discogs API rate limit exceeded. Please try again in a minute.',
-            retryAfter: error.response.headers['retry-after'] || 60,
-            details: 'The app is now using rate limiting and caching to minimize this issue.'
-          },
-          { 
-            status: 429,
-            headers: {
-              'Retry-After': error.response.headers['retry-after'] || '60'
-            }
-          }
-        );
+      if (error.message.includes('rate limit') || error.status === 429) {
+        const retryAfter = error.headers?.get('retry-after') || '60';
+        return NextResponse.json({ 
+          error: 'Discogs API rate limit exceeded. Please try again later.', 
+          retryAfter, 
+          details: error.message
+        }, { status: 429 });
       }
       
-      // Handle other API errors
-      if (error.response && error.response.status) {
-        return NextResponse.json(
-          { 
-            error: `Discogs API error: ${error.response.status} ${error.response.statusText || ''}`,
-            details: error.response.data?.message || error.message || 'Unknown error'
-          },
-          { status: error.response.status }
-        );
+      // Handle other API errors with the specific status
+      if (error.status && error.status >= 400) {
+        return NextResponse.json({ 
+          error: error.message || 'Error from Discogs API', 
+          details: error.toString() 
+        }, { status: error.status });
       }
       
-      return NextResponse.json(
-        { error: error.message || 'Error fetching collection data' },
-        { status: 500 }
-      );
+      // Default error response
+      return NextResponse.json({ 
+        error: 'Failed to fetch collection', 
+        details: error.message 
+      }, { status: 500 });
     }
-  } catch (outerError: any) {
-    // This is a fallback for any uncaught exceptions in the authentication check or other setup code
-    console.error('Uncaught exception in collection API:', outerError);
-    return NextResponse.json(
-      { error: 'An unexpected error occurred. Please try again later.' },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    // Last resort error handling for uncaught exceptions
+    console.error('Uncaught exception in collection API route:', error);
+    return NextResponse.json({ 
+      error: 'An unexpected error occurred', 
+      details: error.message 
+    }, { status: 500 });
   }
 } 

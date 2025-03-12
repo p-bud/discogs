@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { CollectionItem, CollectionStats } from '../models/types';
 import Image from 'next/image';
+import { getUserCollection } from '../utils/collection';
 
-interface CollectionAnalysisProps {
-  username: string;
+export interface CollectionAnalysisProps {
+  username?: string;
+  onUsernameChange?: (username: string) => void;
 }
 
-export default function CollectionAnalysis({ username }: CollectionAnalysisProps) {
+export default function CollectionAnalysis({ username: propUsername }: CollectionAnalysisProps) {
+  const [username, setUsername] = useState(propUsername || '');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [collection, setCollection] = useState<CollectionItem[]>([]);
@@ -16,167 +19,104 @@ export default function CollectionAnalysis({ username }: CollectionAnalysisProps
   const [retryCount, setRetryCount] = useState<number>(0);
   const [retryTimeout, setRetryTimeout] = useState<NodeJS.Timeout | null>(null);
   const [retryCountdown, setRetryCountdown] = useState<number>(0);
+  const [limitedResults, setLimitedResults] = useState(false);
 
   // Define fetchCollection outside the useEffect so it can be referenced in button click handlers
   const fetchCollection = async () => {
+    if (!username) {
+      setError('Please enter a Discogs username');
+      return;
+    }
+
     setLoading(true);
     setError(null);
+    setCollection([]);
+    setLimitedResults(false);
+    setLoadingMessage('Starting to fetch your collection...');
     
-    // Set a loading message that changes over time to show progress
-    setLoadingMessage('Fetching your 50 most recent collection additions from Discogs...');
-    
-    // Set a timeout to update loading message after 5 seconds
-    const messageTimeout = setTimeout(() => {
-      setLoadingMessage('This might take a minute - analyzing your 50 most recent additions...');
-    }, 5000);
-    
-    // Set another timeout to update the message again after 20 seconds
-    const messageTimeout2 = setTimeout(() => {
-      setLoadingMessage('Still working... We\'re processing your 50 most recent additions to calculate rarity scores.');
-    }, 20000);
+    // Update loading message periodically to show progress
+    const messageInterval = setInterval(() => {
+      setLoadingMessage(prevMessage => {
+        if (prevMessage.includes('This may take a moment')) {
+          return 'Processing your collection... (Using preview mode with limited items to avoid timeouts)';
+        } else if (prevMessage.includes('Starting')) {
+          return 'Fetching your collection from Discogs... This may take a moment.';
+        }
+        return prevMessage;
+      });
+    }, 3000);
 
     try {
-      // Wrap the entire fetch process in a try-catch
-      try {
-        const response = await fetch(`/api/collection?username=${encodeURIComponent(username)}`, {
-          // Set a longer timeout
-          signal: AbortSignal.timeout(120000) // 120 second timeout (increased from 60)
-        });
-        
-        // Clear the message timeouts
-        clearTimeout(messageTimeout);
-        clearTimeout(messageTimeout2);
+      const response = await fetch(`/api/collection?username=${encodeURIComponent(username)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // Set a longer timeout for the fetch request
+        signal: AbortSignal.timeout(120000), // 2 minute timeout
+      });
 
-        // Check if the request was aborted due to timeout
-        if (response.status === 0) {
-          throw new Error("Request timed out. Discogs API may be experiencing issues.");
-        }
+      // Check for timeout (status 0)
+      if (response.status === 0) {
+        throw new Error('The request timed out. The collection may be too large to process.');
+      }
 
-        // Check the content type before parsing as JSON
-        const contentType = response.headers.get('content-type');
-        let data;
-        
-        if (contentType && contentType.includes('application/json')) {
-          try {
-            data = await response.json();
-          } catch (parseError) {
-            console.error('Error parsing JSON response:', parseError);
-            throw new Error('Invalid response format from server. Please try again later.');
-          }
-        } else {
-          // Handle non-JSON responses
-          const textResponse = await response.text();
-          console.error('Received non-JSON response:', textResponse);
-          throw new Error(`Server returned invalid response format: ${textResponse.substring(0, 100)}...`);
-        }
-
-        if (!response.ok) {
-          // Check for rate limit error
-          if (response.status === 429) {
-            // Get retry after value
-            const retryAfter = parseInt(response.headers.get('retry-after') || data.retryAfter || '60', 10);
-            const retryAfterSec = Math.min(60, Math.max(10, retryAfter)); // Between 10-60 seconds
-            
-            // Increment retry count
-            const newRetryCount = retryCount + 1;
-            setRetryCount(newRetryCount);
-            
-            // If we've tried less than 3 times, retry automatically
-            if (newRetryCount < 3) {
-              setRetryCountdown(retryAfterSec);
-              setLoadingMessage(
-                `Rate limit reached. Automatically retrying in ${retryAfterSec} seconds (attempt ${newRetryCount}/3)...`
-              );
+      // Check if the response is JSON
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const data = await response.json();
+          
+          if (!response.ok) {
+            // Handle various error status codes
+            if (response.status === 429) {
+              throw new Error(`Rate limit exceeded. ${data.error || 'Please try again later.'}`);
+            } else if (response.status === 504) {
+              // Increment retry count for timeouts
+              setRetryCount(prev => prev + 1);
               
-              // Set up countdown
-              const countdownInterval = setInterval(() => {
-                setRetryCountdown(prev => {
-                  if (prev <= 1) {
-                    clearInterval(countdownInterval);
-                    return 0;
-                  }
-                  return prev - 1;
-                });
-              }, 1000);
-              
-              // Set a timeout to retry
-              const timeout = setTimeout(() => {
-                clearInterval(countdownInterval);
-                setRetryTimeout(null);
-                fetchCollection();
-              }, retryAfterSec * 1000);
-              
-              if (retryTimeout) {
-                clearTimeout(retryTimeout);
+              if (retryCount >= 2) {
+                throw new Error(`The request timed out multiple times. Your collection may be too large to process in preview mode. We're currently limiting to a subset of your collection to avoid timeouts.`);
+              } else {
+                throw new Error(`The request timed out. This could be due to high traffic or a large collection. Please try again.`);
               }
-              setRetryTimeout(timeout);
-              return;
+            } else if (response.status === 404 || (data.releases && data.releases.length === 0)) {
+              throw new Error('No releases found. Please verify your Discogs username.');
             } else {
-              // After 3 retries, give up
-              throw new Error(
-                `Discogs API rate limit exceeded. Please try again later. ${data.details || ''}`
-              );
+              throw new Error(data.error || 'An error occurred while fetching your collection.');
             }
           }
           
-          throw new Error(data.error || 'Failed to fetch collection');
+          if (data.limitedResults) {
+            setLimitedResults(true);
+          }
+          
+          setCollection(data.releases || []);
+          setStats(data.stats || null);
+        } catch (jsonError: unknown) {
+          console.error('Error parsing JSON:', jsonError);
+          const errorMessage = jsonError instanceof Error ? jsonError.message : 'Unknown error';
+          throw new Error(`Failed to parse response: ${errorMessage}`);
         }
-
-        // Successful response
-        setCollection(data.collection || []);
-        setStats(data.stats || null);
-        
-        // Reset retry count on success
-        setRetryCount(0);
-      } catch (err: any) {
-        // Clear the message timeouts
-        clearTimeout(messageTimeout);
-        clearTimeout(messageTimeout2);
-        
-        // Format a user-friendly error message
-        let errorMessage = err.message || 'An error occurred while fetching your collection';
-        let isTimeout = false;
-        
-        // Add more context for specific errors
-        if (errorMessage.includes('rate limit')) {
-          errorMessage = `Discogs API rate limit exceeded. The API only allows a limited number of requests per minute. Please try again in a few minutes.`;
-        } else if (errorMessage.includes('timed out') || errorMessage.includes('timeout')) {
-          isTimeout = true;
-          errorMessage = `Request timed out. The Discogs API might be experiencing high traffic or your 50 most recent additions might contain releases with a lot of data. Please try again.`;
-        } else if (errorMessage.includes('No releases found')) {
-          errorMessage = `No releases found in collection for ${username}. Make sure you've entered the correct Discogs username and have records in your collection.`;
-        } else if (errorMessage.includes('network') || err.name === 'FetchError') {
-          errorMessage = `Network error. Please check your internet connection and try again.`;
-        }
-        
-        setError(errorMessage);
-        setRetryCount(isTimeout ? retryCount + 1 : 0); // Increment retry count only for timeouts
+      } else {
+        // Handle non-JSON response
+        const text = await response.text();
+        console.error('Received non-JSON response:', text.substring(0, 100));
+        throw new Error(`Received unexpected response format. Please try again later.`);
       }
-    } catch (err: any) {
-      // Clear the message timeouts
-      clearTimeout(messageTimeout);
-      clearTimeout(messageTimeout2);
+    } catch (error: any) {
+      console.error('Error fetching collection:', error);
       
-      // Format a user-friendly error message
-      let errorMessage = err.message || 'An error occurred while fetching your collection';
-      let isTimeout = false;
-      
-      // Add more context for specific errors
-      if (errorMessage.includes('rate limit')) {
-        errorMessage = `Discogs API rate limit exceeded. The API only allows a limited number of requests per minute. Please try again in a few minutes.`;
-      } else if (errorMessage.includes('timed out') || errorMessage.includes('timeout')) {
-        isTimeout = true;
-        errorMessage = `Request timed out. The Discogs API might be experiencing high traffic or your 50 most recent additions might contain releases with a lot of data. Please try again.`;
-      } else if (errorMessage.includes('No releases found')) {
-        errorMessage = `No releases found in collection for ${username}. Make sure you've entered the correct Discogs username and have records in your collection.`;
-      } else if (errorMessage.includes('network') || err.name === 'FetchError') {
-        errorMessage = `Network error. Please check your internet connection and try again.`;
+      // Network errors
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        setError('Network error. Please check your internet connection and try again.');
+      } else {
+        setError(error.message || 'An error occurred. Please try again.');
       }
-      
-      setError(errorMessage);
-      setRetryCount(isTimeout ? retryCount + 1 : 0); // Increment retry count only for timeouts
     } finally {
+      clearInterval(messageInterval);
       setLoading(false);
+      setLoadingMessage('');
     }
   };
 
@@ -301,7 +241,7 @@ export default function CollectionAnalysis({ username }: CollectionAnalysisProps
           </p>
         )}
         <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto">
-          Analyzing your 50 most recent collection additions to stay within Discogs API rate limits.
+          Analyzing your collection to stay within Discogs API rate limits.
         </p>
       </div>
     );
@@ -323,7 +263,7 @@ export default function CollectionAnalysis({ username }: CollectionAnalysisProps
           {error.includes('timed out') && (
             <span className="block mt-2">
               Timeout issues can occur when the Discogs API is busy or experiencing delays. 
-              We've limited analysis to your 50 most recent additions to minimize this, but occasional timeouts may still occur.
+              We've limited analysis to your collection to minimize this, but occasional timeouts may still occur.
             </span>
           )}
         </p>
@@ -374,10 +314,187 @@ export default function CollectionAnalysis({ username }: CollectionAnalysisProps
   }
 
   return (
-    <div className="mt-6">
+    <div className="space-y-4">
+      <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold mb-1">Collection Analyzer</h2>
+          <p className="text-sm text-gray-500">
+            Enter your Discogs username to analyze your record collection.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            placeholder="Discogs username"
+            value={username}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              setUsername(e.target.value);
+              setError(null);
+              setCollection([]);
+              setStats(null);
+              setActiveTab('rarest');
+            }}
+            className="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            disabled={loading}
+          />
+          <button 
+            onClick={fetchCollection} 
+            disabled={loading}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Loading...' : 'Analyze'}
+          </button>
+        </div>
+        
+        {loadingMessage && (
+          <div className="mt-4 p-2 bg-gray-100 rounded">
+            <p>{loadingMessage}</p>
+          </div>
+        )}
+        
+        {error && (
+          <div className="mt-4 p-2 bg-red-100 text-red-700 rounded">
+            <p>{error}</p>
+          </div>
+        )}
+      </div>
+
+      {collection.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">Your Collection</h2>
+            {limitedResults && (
+              <p className="text-sm text-amber-500">
+                Showing a preview of your collection (limited to 30 items to avoid timeouts). 
+                {stats && stats.totalReleases > 0 && 
+                  " We're calculating rarity scores for these items to give you insights about your collection."}
+              </p>
+            )}
+          </div>
+          <div className="mb-4">
+            <div className="flex border-b overflow-x-auto whitespace-nowrap py-1">
+              <button
+                className={`py-2 px-4 font-medium ${
+                  activeTab === 'rarest' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'
+                }`}
+                onClick={() => setActiveTab('rarest')}
+              >
+                Highest Ratio
+              </button>
+              <button
+                className={`py-2 px-4 font-medium ${
+                  activeTab === 'fewestHaves' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'
+                }`}
+                onClick={() => setActiveTab('fewestHaves')}
+              >
+                Fewest Haves
+              </button>
+              <button
+                className={`py-2 px-4 font-medium ${
+                  activeTab === 'mostWanted' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'
+                }`}
+                onClick={() => setActiveTab('mostWanted')}
+              >
+                Most Wanted
+              </button>
+              <button
+                className={`py-2 px-4 font-medium ${
+                  activeTab === 'collectible' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'
+                }`}
+                onClick={() => setActiveTab('collectible')}
+              >
+                Most Collectible
+              </button>
+              <button
+                className={`py-2 px-4 font-medium ${
+                  activeTab === 'common' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'
+                }`}
+                onClick={() => setActiveTab('common')}
+              >
+                Most Common
+              </button>
+              <button
+                className={`py-2 px-4 font-medium ${
+                  activeTab === 'all' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'
+                }`}
+                onClick={() => setActiveTab('all')}
+              >
+                All Items
+              </button>
+            </div>
+          </div>
+
+          {activeTab === 'rarest' && stats && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Your Rarest Records (Want/Have Ratio)</h3>
+              <p className="text-sm text-gray-600 mb-3">The records with the highest ratio of people wanting them compared to how many people have them.</p>
+              {renderCollectionItems(stats.rarestItems)}
+            </div>
+          )}
+
+          {activeTab === 'fewestHaves' && stats && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Your Least Common Records (Fewest Haves)</h3>
+              <p className="text-sm text-gray-600 mb-3">The records that very few Discogs users have in their collections.</p>
+              {stats.fewestHaves && stats.fewestHaves.length > 0 ? (
+                renderCollectionItems(stats.fewestHaves)
+              ) : (
+                <p className="text-gray-500 italic py-4">No have/want data available for this category.</p>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'mostWanted' && stats && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Your Most Wanted Records</h3>
+              <p className="text-sm text-gray-600 mb-3">The records that the most Discogs users have added to their wantlists.</p>
+              {stats.mostWanted && stats.mostWanted.length > 0 ? (
+                renderCollectionItems(stats.mostWanted)
+              ) : (
+                <p className="text-gray-500 italic py-4">No have/want data available for this category.</p>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'collectible' && stats && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Your Most Collectible Records</h3>
+              <p className="text-sm text-gray-600 mb-3">Records that are widely collected but still in high demand.</p>
+              {stats.mostCollectible && stats.mostCollectible.length > 0 ? (
+                renderCollectionItems(stats.mostCollectible)
+              ) : (
+                <p className="text-gray-500 italic py-4">No have/want data available for this category.</p>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'common' && stats && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Your Most Common Records</h3>
+              <p className="text-sm text-gray-600 mb-3">Records with the lowest want/have ratio.</p>
+              {stats.mostCommonItems && stats.mostCommonItems.length > 0 ? (
+                renderCollectionItems(stats.mostCommonItems)
+              ) : (
+                <p className="text-gray-500 italic py-4">No have/want data available for this category.</p>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'all' && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Your Most Recent Additions</h3>
+              <p className="text-sm text-gray-600 mb-3">Shows the 50 most recently added items to your collection.</p>
+              {renderCollectionItems(collection)}
+            </div>
+          )}
+        </div>
+      )}
+
       {stats && (
-        <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-4 mb-6">
-          <h2 className="text-xl font-bold text-indigo-800 mb-4">Collection Summary <span className="text-sm font-normal text-indigo-600">(Based on 50 most recent additions)</span></h2>
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">Collection Summary</h2>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white p-4 rounded shadow">
               <div className="text-sm text-gray-500">Releases Analyzed</div>
@@ -397,107 +514,6 @@ export default function CollectionAnalysis({ username }: CollectionAnalysisProps
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      <div className="mb-4">
-        <div className="flex border-b overflow-x-auto whitespace-nowrap py-1">
-          <button
-            className={`py-2 px-4 font-medium ${
-              activeTab === 'rarest' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'
-            }`}
-            onClick={() => setActiveTab('rarest')}
-          >
-            Highest Ratio
-          </button>
-          <button
-            className={`py-2 px-4 font-medium ${
-              activeTab === 'fewestHaves' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'
-            }`}
-            onClick={() => setActiveTab('fewestHaves')}
-          >
-            Fewest Haves
-          </button>
-          <button
-            className={`py-2 px-4 font-medium ${
-              activeTab === 'mostWanted' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'
-            }`}
-            onClick={() => setActiveTab('mostWanted')}
-          >
-            Most Wanted
-          </button>
-          <button
-            className={`py-2 px-4 font-medium ${
-              activeTab === 'collectible' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'
-            }`}
-            onClick={() => setActiveTab('collectible')}
-          >
-            Most Collectible
-          </button>
-          <button
-            className={`py-2 px-4 font-medium ${
-              activeTab === 'common' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'
-            }`}
-            onClick={() => setActiveTab('common')}
-          >
-            Most Common
-          </button>
-          <button
-            className={`py-2 px-4 font-medium ${
-              activeTab === 'all' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'
-            }`}
-            onClick={() => setActiveTab('all')}
-          >
-            All Items
-          </button>
-        </div>
-      </div>
-
-      {activeTab === 'rarest' && stats && (
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Your Rarest Records (Want/Have Ratio)</h3>
-          <p className="text-sm text-gray-600 mb-3">The records with the highest ratio of people wanting them compared to how many people have them.</p>
-          {renderCollectionItems(stats.rarestItems)}
-        </div>
-      )}
-
-      {activeTab === 'fewestHaves' && stats && (
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Your Least Common Records (Fewest Haves)</h3>
-          <p className="text-sm text-gray-600 mb-3">The records that very few Discogs users have in their collections.</p>
-          {renderCollectionItems(stats.fewestHaves)}
-        </div>
-      )}
-
-      {activeTab === 'mostWanted' && stats && (
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Your Most Wanted Records</h3>
-          <p className="text-sm text-gray-600 mb-3">The records that the most Discogs users have added to their wantlists.</p>
-          {renderCollectionItems(stats.mostWanted)}
-        </div>
-      )}
-
-      {activeTab === 'collectible' && stats && (
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Your Most Collectible Records</h3>
-          <p className="text-sm text-gray-600 mb-3">Records that are widely collected but still in high demand.</p>
-          {renderCollectionItems(stats.mostCollectible)}
-        </div>
-      )}
-
-      {activeTab === 'common' && stats && (
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Your Most Common Records</h3>
-          <p className="text-sm text-gray-600 mb-3">Records with the lowest want/have ratio.</p>
-          {renderCollectionItems(stats.mostCommonItems)}
-        </div>
-      )}
-
-      {activeTab === 'all' && (
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Your Most Recent Additions</h3>
-          <p className="text-sm text-gray-600 mb-3">Shows the 50 most recently added items to your collection.</p>
-          {renderCollectionItems(collection)}
         </div>
       )}
     </div>
