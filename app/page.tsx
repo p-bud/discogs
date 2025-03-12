@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import Header from './components/Header';
@@ -145,77 +145,79 @@ export default function Home() {
   };
 
   return (
-    <div className="py-4">
-      <Header />
-      <div className="max-w-4xl mx-auto">
-        <div className="border border-minimal-gray-200 rounded-lg shadow-sm mb-6 overflow-hidden">
-          <div className="bg-minimal-white py-3 px-4 border-b border-minimal-gray-200">
-            <h2 className="text-2xl font-picnic text-minimal-black">Record Discovery Engine</h2>
+    <Suspense fallback={<div>Loading...</div>}>
+      <div className="py-4">
+        <Header />
+        <div className="max-w-4xl mx-auto">
+          <div className="border border-minimal-gray-200 rounded-lg shadow-sm mb-6 overflow-hidden">
+            <div className="bg-minimal-white py-3 px-4 border-b border-minimal-gray-200">
+              <h2 className="text-2xl font-picnic text-minimal-black">Record Discovery Engine</h2>
+            </div>
+            <div className="bg-minimal-white p-6">
+              <p className="text-sm text-minimal-gray-700 mb-4">
+                Search for vinyl releases in the Discogs database. We'll show you a diverse selection of interesting records matching your criteria, with something different each time you search.
+              </p>
+              <SearchFilters onSearch={handleSearch} />
+            </div>
           </div>
-          <div className="bg-minimal-white p-6">
-            <p className="text-sm text-minimal-gray-700 mb-4">
-              Search for vinyl releases in the Discogs database. We'll show you a diverse selection of interesting records matching your criteria, with something different each time you search.
-            </p>
-            <SearchFilters onSearch={handleSearch} />
-          </div>
-        </div>
-        
-        {isLoading && (
-          <div className="text-center py-8">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-minimal-blue-600"></div>
-              <div>
-                <p className="text-minimal-gray-600 font-medium">{searchStage}</p>
-                <p className="text-xs text-minimal-gray-500 mt-1">This process uses the Discogs API which has rate limits, so it may take a moment.</p>
+          
+          {isLoading && (
+            <div className="text-center py-8">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-minimal-blue-600"></div>
+                <div>
+                  <p className="text-minimal-gray-600 font-medium">{searchStage}</p>
+                  <p className="text-xs text-minimal-gray-500 mt-1">This process uses the Discogs API which has rate limits, so it may take a moment.</p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        
-        {!isLoading && searchError && (
-          <div className="mb-6 border border-minimal-gray-200 rounded-lg shadow-sm p-6 bg-minimal-white">
-            <h3 className="font-medium text-minimal-black mb-2">Search Results:</h3>
-            <p className="text-minimal-red-600">{searchError}</p>
-            <button 
-              onClick={handleRetry}
-              className="mt-4 px-4 py-2 bg-minimal-blue-600 text-white rounded-md hover:bg-minimal-blue-700 transition-colors"
-            >
-              Try Again
-            </button>
-          </div>
-        )}
-        
-        {!searchError && results.length > 0 && (
-          <div className="mb-4 text-center bg-minimal-accent-50 p-3 rounded border border-minimal-accent-200">
-            <p className="text-minimal-gray-700 font-medium">
-              <span className="text-minimal-accent-800">✨</span> Showing {results.length} records from a catalog of {totalResults.toLocaleString()} matching releases
-              <span className="block text-sm mt-1">Each search explores different parts of the Discogs catalog to help you discover new music.</span>
-            </p>
-            <div className="mt-2 bg-minimal-white p-2 rounded text-xs text-minimal-gray-600">
-              <p>This curated selection includes a diverse mix of records from the Discogs database.</p>
+          )}
+          
+          {!isLoading && searchError && (
+            <div className="mb-6 border border-minimal-gray-200 rounded-lg shadow-sm p-6 bg-minimal-white">
+              <h3 className="font-medium text-minimal-black mb-2">Search Results:</h3>
+              <p className="text-minimal-red-600">{searchError}</p>
+              <button 
+                onClick={handleRetry}
+                className="mt-4 px-4 py-2 bg-minimal-blue-600 text-white rounded-md hover:bg-minimal-blue-700 transition-colors"
+              >
+                Try Again
+              </button>
             </div>
-            <button
-              onClick={handleRefresh}
-              className="mt-3 px-4 py-2 bg-minimal-accent-100 text-minimal-accent-800 rounded-md hover:bg-minimal-accent-200 transition-colors flex items-center mx-auto"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Explore More Records
-            </button>
-          </div>
-        )}
-        
-        <ResultsList 
-          results={results} 
-          isLoading={isLoading} 
-          error={searchError || undefined}
-          totalFound={totalResults || undefined}
-          searchInfo={{
-            selectionStrategy: 'Record Discovery Engine'
-          }}
-        />
+          )}
+          
+          {!searchError && results.length > 0 && (
+            <div className="mb-4 text-center bg-minimal-accent-50 p-3 rounded border border-minimal-accent-200">
+              <p className="text-minimal-gray-700 font-medium">
+                <span className="text-minimal-accent-800">✨</span> Showing {results.length} records from a catalog of {totalResults.toLocaleString()} matching releases
+                <span className="block text-sm mt-1">Each search explores different parts of the Discogs catalog to help you discover new music.</span>
+              </p>
+              <div className="mt-2 bg-minimal-white p-2 rounded text-xs text-minimal-gray-600">
+                <p>This curated selection includes a diverse mix of records from the Discogs database.</p>
+              </div>
+              <button
+                onClick={handleRefresh}
+                className="mt-3 px-4 py-2 bg-minimal-accent-100 text-minimal-accent-800 rounded-md hover:bg-minimal-accent-200 transition-colors flex items-center mx-auto"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Explore More Records
+              </button>
+            </div>
+          )}
+          
+          <ResultsList 
+            results={results} 
+            isLoading={isLoading} 
+            error={searchError || undefined}
+            totalFound={totalResults || undefined}
+            searchInfo={{
+              selectionStrategy: 'Record Discovery Engine'
+            }}
+          />
+        </div>
       </div>
-    </div>
+    </Suspense>
   );
 } 
