@@ -10,10 +10,32 @@ export default function CollectionPage() {
   const [submittedUsername, setSubmittedUsername] = useState<string>('');
   const router = useRouter();
 
+  const logUser = async (username: string) => {
+    try {
+      await fetch('/api/log-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          username,
+          collectionSize: null // We'll get this later if needed
+        }),
+      });
+      console.log('User logged successfully');
+    } catch (error) {
+      console.error('Failed to log user:', error);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (username.trim()) {
-      setSubmittedUsername(username.trim());
+      const trimmedUsername = username.trim();
+      setSubmittedUsername(trimmedUsername);
+      
+      // Log the user when they submit their username
+      logUser(trimmedUsername);
     }
   };
 
@@ -21,7 +43,7 @@ export default function CollectionPage() {
     <div className="py-8">
       <Header />
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Collection Analyzer</h1>
+        <h1 className="text-3xl font-bold mb-6">Rarity Analyzer</h1>
         
         <div className="bg-white shadow-md rounded-lg p-6 mb-8">
           <h2 className="text-xl font-semibold mb-4">Enter Your Discogs Username</h2>
@@ -55,11 +77,11 @@ export default function CollectionPage() {
             <h3 className="font-bold mb-2">How It Works:</h3>
             <ol className="list-decimal pl-6 mb-4 space-y-2">
               <li>Enter your Discogs username above</li>
-              <li>We'll analyze your 50 most recent collection additions to calculate rarity scores based on want/have ratios</li>
-              <li>See your rarest records and how unique your recent additions are</li>
+              <li>We'll analyze your collection to calculate rarity scores based on want/have ratios</li>
+              <li>See your rarest records and how unique your collection is</li>
             </ol>
             <p className="mb-2">You must be logged in to Discogs to access your collection data.</p>
-            <p className="text-sm italic">Note: To stay within Discogs API rate limits, we analyze only your 50 most recent additions. This ensures fast results while avoiding rate limit errors.</p>
+            <p className="text-sm italic">Note: To stay within Discogs API rate limits, we analyze only your most recent additions. This ensures fast results while avoiding rate limit errors.</p>
           </div>
         )}
       </div>

@@ -7,16 +7,17 @@ const AboutPage = () => {
       <Header />
       <div className="max-w-4xl mx-auto">
         <div className="card mb-8">
-          <h1>About Discogs Explorer</h1>
+          <h1>About Rarity</h1>
           <p className="text-gray-600 mb-6">
-            Explore and analyze vinyl records on Discogs
+            Analyze how rare your vinyl record collection is
           </p>
 
           <div className="space-y-6">
             <section>
-              <h2>What is Discogs Explorer?</h2>
+              <h2>What is Rarity?</h2>
               <p>
-                Discogs Explorer is a tool that helps vinyl collectors explore the Discogs database, analyze their collections, and discover rare records. It leverages Discogs' extensive data to provide insights into record rarity and collection value.
+                Rarity is a tool that helps vinyl collectors analyze their Discogs collections to discover how rare their records are. 
+                It leverages Discogs' extensive data to provide insights into record rarity and collection value.
               </p>
             </section>
 
@@ -24,16 +25,16 @@ const AboutPage = () => {
               <h2>How It Works</h2>
               <ol className="list-decimal pl-5 space-y-2">
                 <li>
-                  <strong>Search & Filter:</strong> Use our detailed filters to find specific releases by genre, artist, style, format, and more.
+                  <strong>Connect Your Account:</strong> Log in with your Discogs account to access your collection data.
                 </li>
                 <li>
-                  <strong>Rarity Analysis:</strong> Our algorithm calculates rarity scores based on Discogs' want/have ratios to help you discover valuable records.
+                  <strong>Collection Analysis:</strong> We analyze your collection to identify your rarest and most sought-after items.
                 </li>
                 <li>
-                  <strong>Collection Analysis:</strong> Connect your Discogs account to analyze your collection and identify your rarest and most sought-after items.
+                  <strong>Rarity Scoring:</strong> Each record receives a rarity score based on several factors from the Discogs database.
                 </li>
                 <li>
-                  <strong>Save & Discover:</strong> Save your searches and explore similar records to expand your collection.
+                  <strong>Discover Gems:</strong> Find out which records in your collection are the most valuable and rare.
                 </li>
               </ol>
             </section>
@@ -60,7 +61,7 @@ const AboutPage = () => {
 
             <section className="pt-4 border-t border-gray-200">
               <p className="text-sm text-gray-500">
-                Discogs Explorer is not affiliated with or endorsed by Discogs. All product names, logos, and brands are property of their respective owners.
+                Rarity is not affiliated with or endorsed by Discogs. All product names, logos, and brands are property of their respective owners.
               </p>
             </section>
           </div>

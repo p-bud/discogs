@@ -3,8 +3,8 @@ import './styles/globals.css';
 import { inter, jetbrainsMono, picnic } from './fonts';
 
 export const metadata = {
-  title: 'Discogs Bargain Finder - Discover Rare Records',
-  description: 'Find rare vinyl records from the Discogs marketplace. Search for albums by genre, style, or artist to discover hidden gems.',
+  title: 'Rarity - How Rare is Your Record Collection?',
+  description: 'Analyze your Discogs vinyl record collection to discover how rare your records are.',
 };
 
 export default function RootLayout({

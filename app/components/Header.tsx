@@ -18,10 +18,10 @@ const Header: React.FC = () => {
         <div className="py-6 flex flex-col items-center sm:flex-row sm:justify-between">
           <div className="text-center sm:text-left">
             <h1 className="text-2xl font-picnic text-minimal-black m-0">
-              Rares
+              Rarity
             </h1>
             <p className="text-minimal-gray-500 text-sm">
-              Discover rare vinyl records
+              How rare is your record collection?
             </p>
           </div>
           
@@ -36,11 +36,6 @@ const Header: React.FC = () => {
           <ul className="flex space-x-1 md:space-x-6 justify-center sm:justify-start overflow-x-auto">
             <li>
               <Link href="/" className="block py-2 px-3 text-minimal-gray-700 hover:text-minimal-accent hover:bg-minimal-gray-50 rounded transition-colors duration-200">
-                Rare Record Finder
-              </Link>
-            </li>
-            <li>
-              <Link href="/collection" className="block py-2 px-3 text-minimal-gray-700 hover:text-minimal-accent hover:bg-minimal-gray-50 rounded transition-colors duration-200">
                 Collection Analyzer
               </Link>
             </li>
