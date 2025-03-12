@@ -2,7 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['img.discogs.com', 'i.discogs.com', 'st.discogs.com'],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'img.discogs.com' },
+      { protocol: 'https', hostname: 'i.discogs.com' },
+      { protocol: 'https', hostname: 'st.discogs.com' },
+    ],
   },
   async headers() {
     return [

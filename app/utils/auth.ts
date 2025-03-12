@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import CryptoJS from 'crypto-js';
 
 // Discogs API credentials provided by the user
 const DISCOGS_CONSUMER_KEY = process.env.DISCOGS_CONSUMER_KEY!;
@@ -50,10 +50,7 @@ export class DiscogsOAuth {
     tokenSecret: string = ''
   ): string {
     const key = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
-    return crypto
-      .createHmac('sha1', key)
-      .update(baseString)
-      .digest('base64');
+    return CryptoJS.HmacSHA1(baseString, key).toString(CryptoJS.enc.Base64);
   }
 
   /**
@@ -115,7 +112,9 @@ export class DiscogsOAuth {
     
     // Create timestamp and nonce
     const timestamp = Math.floor(Date.now() / 1000).toString();
-    const nonce = crypto.randomBytes(16).toString('hex');
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    const nonce = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 
     // Create OAuth parameters
     const oauthParams: Record<string, string> = {

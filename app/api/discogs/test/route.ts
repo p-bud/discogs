@@ -80,4 +80,6 @@ export async function GET() {
       error: errorDetails
     }, { status: statusCode });
   }
-} 
+}
+
+export const runtime = 'edge'; 
