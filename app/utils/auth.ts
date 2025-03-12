@@ -1,8 +1,8 @@
 import crypto from 'crypto';
 
 // Discogs API credentials provided by the user
-const DISCOGS_CONSUMER_KEY = 'gNzKxthQDOyjiCBynacq';
-const DISCOGS_CONSUMER_SECRET = 'afUtCRzXvHfdaJGapoQgpocinQjMXPnp';
+const DISCOGS_CONSUMER_KEY = process.env.DISCOGS_CONSUMER_KEY!;
+const DISCOGS_CONSUMER_SECRET = process.env.DISCOGS_CONSUMER_SECRET!;
 const DISCOGS_REQUEST_TOKEN_URL = 'https://api.discogs.com/oauth/request_token';
 const DISCOGS_AUTHORIZE_URL = 'https://www.discogs.com/oauth/authorize';
 const DISCOGS_ACCESS_TOKEN_URL = 'https://api.discogs.com/oauth/access_token';
