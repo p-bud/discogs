@@ -7,16 +7,14 @@ const AboutPage = () => {
       <Header />
       <div className="max-w-4xl mx-auto">
         <div className="card mb-8">
-          <h1>About Rarity</h1>
-          <p className="text-gray-600 mb-6">
-            Analyze how rare your vinyl record collection is
-          </p>
+          
+        
 
           <div className="space-y-6">
             <section>
-              <h2>What is Rarity?</h2>
+              <h2>What is Raerz?</h2>
               <p>
-                Rarity is a tool that helps vinyl collectors analyze their Discogs collections to discover how rare their records are. 
+                Raerz is a tool that helps vinyl collectors analyze their Discogs collections to discover how rare their records are. 
                 It leverages Discogs' extensive data to provide insights into record rarity and collection value.
               </p>
             </section>
@@ -61,7 +59,7 @@ const AboutPage = () => {
 
             <section className="pt-4 border-t border-gray-200">
               <p className="text-sm text-gray-500">
-                Rarity is not affiliated with or endorsed by Discogs. All product names, logos, and brands are property of their respective owners.
+                raerz is not affiliated with or endorsed by Discogs. All product names, logos, and brands are property of their respective owners.
               </p>
             </section>
           </div>

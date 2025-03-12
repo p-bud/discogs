@@ -18,11 +18,10 @@ const Header: React.FC = () => {
         <div className="py-6 flex flex-col items-center sm:flex-row sm:justify-between">
           <div className="text-center sm:text-left">
             <h1 className="text-2xl font-picnic text-minimal-black m-0">
-              Rarity
+              <Link href="/" className="hover:text-minimal-accent transition-colors duration-200">
+                Raerz
+              </Link>
             </h1>
-            <p className="text-minimal-gray-500 text-sm">
-              How rare is your record collection?
-            </p>
           </div>
           
           {isClient && (
@@ -32,7 +31,7 @@ const Header: React.FC = () => {
           )}
         </div>
         
-        <nav className="pb-3 border-b border-minimal-gray-200">
+        <nav className="pb-3">
           <ul className="flex space-x-1 md:space-x-6 justify-center sm:justify-start overflow-x-auto">
             <li>
               <Link href="/" className="block py-2 px-3 text-minimal-gray-700 hover:text-minimal-accent hover:bg-minimal-gray-50 rounded transition-colors duration-200">

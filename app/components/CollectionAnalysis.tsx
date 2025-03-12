@@ -334,20 +334,17 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
           <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100">
             <h3 className="text-lg font-semibold mb-2 text-blue-800">How This Works</h3>
             <p className="mb-2 text-sm text-blue-700">
-              We analyze up to 50 of your recently added records, using actual community data for some and an estimation model for others to avoid timeouts.
-              Rarity scores are calculated as the ratio of "wants" to "haves" in the Discogs community.
+              We analyze up to 50 of your recently added records. Rarity scores are calculated as the ratio of "wants" to "haves" in the Discogs community.
             </p>
             <p className="text-sm text-blue-700">
-              The system is limited to 50 records because each record requires multiple API calls for detailed stats, and cloud functions 
-              have strict time limits (10 seconds for Vercel's free tier).
+              The system is limited to 50 records due to Discogs API limitations.
             </p>
           </div>
 
           {limitedResults && (
             <div className="bg-yellow-50 p-4 rounded-lg mb-6 border border-yellow-100">
               <p className="text-sm text-yellow-700">
-                Showing a limited preview of your collection (maximum 50 items to avoid timeouts). 
-                Some records may use estimated rarity scores to speed up processing.
+                Please wait while we analyze your collection.
               </p>
             </div>
           )}
