@@ -5,12 +5,12 @@ import { getUserCollection } from '../../utils/collection';
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic';
 
-// Maximum items to process to prevent timeouts
-const MAX_ITEMS = 30;
+// Maximum items to fetch
+const MAX_ITEMS = 50;
 
 /**
  * API route to get a user's Discogs collection
- * Gets a user's Discogs collection and calculates rarity metrics
+ * Gets a user's Discogs collection with basic info (no community data)
  */
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
@@ -29,58 +29,33 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Username is required' }, { status: 400 });
     }
     
-    // Get the collection
+    console.time('collection-fetch'); // Add timing for debugging
+    
+    // Get the collection (basic info only, fast)
     try {
       const collection = await getUserCollection(username);
       
-      // Check if the collection was limited due to size constraints
-      const isLimited = collection.length > 0 && collection.length <= MAX_ITEMS;
-
-      // Calculate comprehensive stats from the collection for all tabs
-      const stats = {
-        totalReleases: collection.length,
-        averageRarityScore: collection.reduce((sum, item) => sum + (item.rarityScore || 0), 0) / collection.length || 0,
-        
-        // For "Highest Ratio" tab
-        rarestItems: [...collection]
-          .sort((a, b) => (b.rarityScore || 0) - (a.rarityScore || 0))
-          .slice(0, 10),
-        
-        // For "Most Common" tab
-        mostCommonItems: [...collection]
-          .sort((a, b) => (a.rarityScore || 0) - (b.rarityScore || 0))
-          .slice(0, 10),
-        
-        // For "Fewest Haves" tab
-        fewestHaves: [...collection]
-          .sort((a, b) => (a.haveCount || 0) - (b.haveCount || 0))
-          .slice(0, 10),
-        
-        // For "Most Wanted" tab
-        mostWanted: [...collection]
-          .sort((a, b) => (b.wantCount || 0) - (a.wantCount || 0))
-          .slice(0, 10),
-        
-        // For "Most Collectible" tab
-        mostCollectible: [...collection]
-          .sort((a, b) => {
-            // Create a collectibility score that favors items with both high have and want counts
-            const aScore = ((a.haveCount || 0) * (a.wantCount || 0)) / 1000;
-            const bScore = ((b.haveCount || 0) * (b.wantCount || 0)) / 1000;
-            return bScore - aScore;
-          })
-          .slice(0, 10)
-      };
+      console.timeEnd('collection-fetch'); // Log how long it took
       
-      // Return the response
+      // Return the response (just the basic collection data, no stats yet)
       return NextResponse.json({ 
         releases: collection,
-        stats,
-        limitedResults: isLimited
+        // Empty placeholder stats that will be calculated client-side
+        stats: {
+          totalReleases: collection.length,
+          averageRarityScore: 0,
+          rarestItems: [],
+          mostCommonItems: [],
+          fewestHaves: [],
+          mostWanted: [],
+          mostCollectible: []
+        },
+        limitedResults: collection.length >= MAX_ITEMS
       });
       
     } catch (error: any) {
       console.error('Collection API error:', error);
+      console.timeEnd('collection-fetch'); // Log time even on error
       
       // Handle timeout errors
       if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
@@ -99,35 +74,34 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       }
       
       // Handle rate limit errors
-      if (error.message.includes('rate limit') || error.status === 429) {
-        const retryAfter = error.headers?.get('retry-after') || '60';
+      if (error.response?.status === 429 || error.message?.includes('rate limit')) {
         return NextResponse.json({ 
-          error: 'Discogs API rate limit exceeded. Please try again later.', 
-          retryAfter, 
+          error: 'Rate limit exceeded. Please try again in a few minutes.', 
+          retryAfter: error.response?.headers?.['retry-after'] || '60',
           details: error.message
         }, { status: 429 });
       }
       
-      // Handle other API errors with the specific status
-      if (error.status && error.status >= 400) {
+      // Handle API errors with specific status code
+      if (error.response?.status) {
         return NextResponse.json({ 
           error: error.message || 'Error from Discogs API', 
-          details: error.toString() 
-        }, { status: error.status });
+          details: error.response?.data
+        }, { status: error.response.status });
       }
       
-      // Default error response
+      // Handle all other errors
       return NextResponse.json({ 
-        error: 'Failed to fetch collection', 
-        details: error.message 
+        error: error.message || 'An unexpected error occurred', 
+        details: error.toString()
       }, { status: 500 });
     }
   } catch (error: any) {
-    // Last resort error handling for uncaught exceptions
-    console.error('Uncaught exception in collection API route:', error);
+    console.error('Unexpected error in collection API route:', error);
+    
     return NextResponse.json({ 
-      error: 'An unexpected error occurred', 
-      details: error.message 
+      error: 'An unexpected error occurred processing your request', 
+      details: error.message || error.toString()
     }, { status: 500 });
   }
 } 
