@@ -9,6 +9,38 @@ import ResultsList from './components/ResultsList';
 import { Listing, SearchFilters as SearchFiltersType } from './models/types';
 import Link from 'next/link';
 
+// Component that uses useSearchParams wrapped in Suspense
+function SearchParamsHandler({ 
+  onAuthError, 
+  onAuthSuccess,
+  onQueryChange 
+}: { 
+  onAuthError: (error: string) => void;
+  onAuthSuccess: () => void;
+  onQueryChange: (query: string) => void;
+}) {
+  const searchParams = useSearchParams();
+  
+  useEffect(() => {
+    const authError = searchParams.get('auth_error');
+    if (authError) {
+      onAuthError(authError);
+    }
+    
+    const authSuccess = searchParams.get('auth_success');
+    if (authSuccess) {
+      onAuthSuccess();
+    }
+    
+    const query = searchParams.get('q');
+    if (query) {
+      onQueryChange(query);
+    }
+  }, [searchParams, onAuthError, onAuthSuccess, onQueryChange]);
+  
+  return null;
+}
+
 export default function Home() {
   const [results, setResults] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -16,46 +48,36 @@ export default function Home() {
   const [searchStage, setSearchStage] = useState<string>('');
   const [totalResults, setTotalResults] = useState<number>(0);
   const [poolSize, setPoolSize] = useState<number>(0);
-  const searchParams = useSearchParams();
-
-  // Check for auth success/failure messages
-  useEffect(() => {
-    const authSuccess = searchParams.get('auth_success');
-    const authError = searchParams.get('auth_error');
-
-    if (authSuccess && !document.cookie.includes('discogs_auth_completed=true')) {
-      // Show success message only if we don't have the auth completed cookie yet
-      alert('Successfully connected to Discogs!');
-      
-      // Force refresh the page to ensure the authentication status is updated
-      // This helps in case the cookies were set but not reflected in the UI yet
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 1000);
-    } else if (authError) {
-      // Show error message
-      let errorMessage = 'Failed to connect to Discogs.';
-      
-      switch (authError) {
-        case 'missing_params':
-          errorMessage = 'OAuth error: Missing required parameters.';
-          break;
-        case 'missing_token_secret':
-          errorMessage = 'OAuth error: Missing token secret. Please try again.';
-          break;
-        case 'invalid_access_token':
-          errorMessage = 'OAuth error: Invalid access token response from Discogs.';
-          break;
-        default:
-          if (authError.startsWith('api_error_')) {
-            const errorCode = authError.replace('api_error_', '');
-            errorMessage = `Discogs API error (${errorCode}). Please try again later.`;
-          }
-      }
-      
-      alert(errorMessage);
+  const [initialQuery, setInitialQuery] = useState<string>('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  
+  // Reference to search form for programmatic access
+  const searchFormRef = useRef<any>(null);
+  
+  // Handle auth errors
+  const handleAuthError = (error: string) => {
+    console.error('Authentication error:', error);
+    setAuthError(error);
+  };
+  
+  // Handle auth success
+  const handleAuthSuccess = () => {
+    // Set a cookie to prevent showing the success message on refresh
+    if (!document.cookie.includes('discogs_auth_completed=true')) {
+      document.cookie = 'discogs_auth_completed=true; max-age=3600; path=/';
+      // Show a success message or update UI here
     }
-  }, [searchParams]);
+  };
+  
+  // Handle URL query parameter
+  const handleQueryChange = (query: string) => {
+    setInitialQuery(query);
+    // If we have a search form ref and a query, trigger search
+    if (searchFormRef.current && query) {
+      // Set the input value and trigger search
+      searchFormRef.current.initiateSearch(query);
+    }
+  };
 
   // Keep track of the last search filters for retry functionality
   const lastSearchFilters = useRef<SearchFiltersType | null>(null);
@@ -145,10 +167,25 @@ export default function Home() {
   };
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <main className="flex min-h-screen flex-col">
+      <Suspense fallback={null}>
+        <SearchParamsHandler 
+          onAuthError={handleAuthError}
+          onAuthSuccess={handleAuthSuccess}
+          onQueryChange={handleQueryChange}
+        />
+      </Suspense>
+      
+      <Header />
+      
       <div className="py-4">
-        <Header />
         <div className="max-w-4xl mx-auto">
+          {authError && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              <p>Authentication error: {authError}</p>
+            </div>
+          )}
+          
           <div className="border border-minimal-gray-200 rounded-lg shadow-sm mb-6 overflow-hidden">
             <div className="bg-minimal-white py-3 px-4 border-b border-minimal-gray-200">
               <h2 className="text-2xl font-picnic text-minimal-black">Record Discovery Engine</h2>
@@ -157,7 +194,11 @@ export default function Home() {
               <p className="text-sm text-minimal-gray-700 mb-4">
                 Search for vinyl releases in the Discogs database. We'll show you a diverse selection of interesting records matching your criteria, with something different each time you search.
               </p>
-              <SearchFilters onSearch={handleSearch} />
+              <SearchFilters 
+                onSearch={handleSearch} 
+                ref={searchFormRef}
+                initialQuery={initialQuery}
+              />
             </div>
           </div>
           
@@ -218,6 +259,6 @@ export default function Home() {
           />
         </div>
       </div>
-    </Suspense>
+    </main>
   );
 } 

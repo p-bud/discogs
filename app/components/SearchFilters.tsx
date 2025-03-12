@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { SearchFilters as SearchFiltersType, RecordCondition } from '../models/types';
 import { getGenres, getStyles, getFormats, getGenreStyleMap } from '../utils/discogs-client';
 
 interface SearchFiltersProps {
   onSearch: (filters: SearchFiltersType) => void;
+  isLoading?: boolean;
+  initialQuery?: string;
 }
 
 const conditionOptions: RecordCondition[] = ['M', 'NM', 'VG+', 'VG', 'G+', 'G', 'F', 'P'];
@@ -15,7 +17,7 @@ const initialStyleOptions = ['Tech House', 'Ambient', 'Deep House', 'Techno', 'H
 const initialFormatOptions = ['LP', '7"', '10"', '12"', 'Box Set', 'Cassette', 'CD'];
 const countryOptions = ['US', 'UK', 'Germany', 'Japan', 'France', 'Canada', 'Australia', 'Italy', 'Spain', 'Netherlands'];
 
-const SearchFilters: React.FC<SearchFiltersProps> = ({ onSearch }) => {
+const SearchFilters = forwardRef<any, SearchFiltersProps>(({ onSearch, initialQuery }, ref) => {
   const [filters, setFilters] = useState<SearchFiltersType>({
     genre: '',
     artist: '',
@@ -44,6 +46,30 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({ onSearch }) => {
     filteredCount: 0,
     selectedGenre: '',
   });
+
+  const [query, setQuery] = useState<string>('');
+  
+  // Use initialQuery if provided
+  useEffect(() => {
+    if (initialQuery) {
+      setQuery(initialQuery);
+    }
+  }, [initialQuery]);
+  
+  // Expose methods to parent component via ref
+  useImperativeHandle(ref, () => ({
+    initiateSearch: (searchQuery: string) => {
+      setQuery(searchQuery);
+      // Trigger search with current filters and the provided query
+      const searchFilters = {
+        ...filters,
+        query: searchQuery
+      };
+      onSearch(searchFilters);
+    }
+  }));
+  
+  // Function to handle search submission
 
   // Fetch options from the API when component mounts
   useEffect(() => {
@@ -350,6 +376,6 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({ onSearch }) => {
       )}
     </form>
   );
-};
+});
 
 export default SearchFilters; 

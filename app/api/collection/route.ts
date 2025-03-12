@@ -3,6 +3,9 @@ import { cookies } from 'next/headers';
 import { getUserCollection, calculateCollectionStats } from '../../utils/collection';
 import { isAuthenticated } from '../../utils/discogs';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 /**
  * GET handler for collection endpoint
  * Gets a user's Discogs collection and calculates rarity metrics

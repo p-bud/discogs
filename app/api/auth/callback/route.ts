@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { DiscogsOAuth, apiConfig } from '@/app/utils/auth';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Extract query parameters

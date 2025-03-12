@@ -3,6 +3,9 @@ import axios from 'axios';
 import { cookies } from 'next/headers';
 import { DiscogsOAuth, apiConfig } from '@/app/utils/auth';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 // A simple test endpoint to verify Discogs API credentials
 export async function GET() {
   try {

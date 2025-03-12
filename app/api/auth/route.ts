@@ -4,6 +4,9 @@ import { NextResponse } from 'next/server';
 import { DiscogsOAuth, apiConfig } from '@/app/utils/auth';
 import { headers as nextHeaders } from 'next/headers';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 // Handler for GET requests to /api/auth
 export async function GET() {
   try {
@@ -80,6 +83,4 @@ export async function GET() {
     
     return NextResponse.json({ error: errorMessage }, { status: statusCode });
   }
-}
-
-export const dynamic = 'force-dynamic'; 
+} 
