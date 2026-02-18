@@ -1,8 +1,5 @@
 import CryptoJS from 'crypto-js';
 
-// Discogs API credentials provided by the user
-const DISCOGS_CONSUMER_KEY = process.env.DISCOGS_CONSUMER_KEY!;
-const DISCOGS_CONSUMER_SECRET = process.env.DISCOGS_CONSUMER_SECRET!;
 const DISCOGS_REQUEST_TOKEN_URL = 'https://api.discogs.com/oauth/request_token';
 const DISCOGS_AUTHORIZE_URL = 'https://www.discogs.com/oauth/authorize';
 const DISCOGS_ACCESS_TOKEN_URL = 'https://api.discogs.com/oauth/access_token';
@@ -33,10 +30,14 @@ export class DiscogsOAuth {
   private consumer: OAuthConsumer;
   private signatureMethod: string;
 
-  constructor(consumerKey: string = DISCOGS_CONSUMER_KEY, consumerSecret: string = DISCOGS_CONSUMER_SECRET) {
+  constructor(consumerKey?: string, consumerSecret?: string) {
+    // Read env vars at call time so the value is correct even if the module
+    // was imported before the environment was fully initialised.
+    const key = consumerKey ?? process.env.DISCOGS_CONSUMER_KEY ?? '';
+    const secret = consumerSecret ?? process.env.DISCOGS_CONSUMER_SECRET ?? '';
     this.consumer = {
-      key: consumerKey,
-      secret: consumerSecret
+      key,
+      secret,
     };
     this.signatureMethod = 'HMAC-SHA1';
   }
@@ -189,11 +190,13 @@ export class DiscogsOAuth {
   }
 }
 
-// Export API URLs and credentials
+// Export OAuth endpoint URLs and credentials.
+// Consumer key/secret are exposed as getters so they are read from process.env
+// at access time rather than being frozen to undefined at module-load time.
 export const apiConfig = {
-  DISCOGS_CONSUMER_KEY,
-  DISCOGS_CONSUMER_SECRET,
+  get DISCOGS_CONSUMER_KEY() { return process.env.DISCOGS_CONSUMER_KEY ?? ''; },
+  get DISCOGS_CONSUMER_SECRET() { return process.env.DISCOGS_CONSUMER_SECRET ?? ''; },
   DISCOGS_REQUEST_TOKEN_URL,
   DISCOGS_AUTHORIZE_URL,
-  DISCOGS_ACCESS_TOKEN_URL
+  DISCOGS_ACCESS_TOKEN_URL,
 }; 
