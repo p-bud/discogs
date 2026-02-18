@@ -1,6 +1,22 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { SearchFilters, Listing } from '../../models/types';
 import { searchDiscogs, searchDatabaseWithRarity } from '../../utils/discogs';
+
+const SearchFiltersSchema = z.object({
+  genre: z.string().max(100).optional(),
+  style: z.string().max(100).optional(),
+  format: z.string().max(50).optional(),
+  artist: z.string().max(200).optional(),
+  album: z.string().max(200).optional(),
+  yearMin: z.number().int().min(1900).max(2100).optional(),
+  yearMax: z.number().int().min(1900).max(2100).optional(),
+  priceMin: z.number().min(0).optional(),
+  priceMax: z.number().min(0).optional(),
+  condition: z.array(z.string().max(10)).max(10).optional(),
+  country: z.string().max(100).optional(),
+  sortByRarity: z.boolean().optional(),
+});
 
 // OFFLINE MODE: Using hardcoded data instead of API calls
 // This ensures searches work even if the Discogs API is unavailable
@@ -453,8 +469,23 @@ const DEFAULT_GENRES = ["Rock", "Jazz", "Electronic", "Classical", "Hip Hop", "P
 
 export async function POST(request: Request) {
   try {
-    const filters = await request.json();
-    
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return NextResponse.json({ success: false, error: 'Invalid JSON body' }, { status: 400 });
+    }
+
+    const parseResult = SearchFiltersSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Validation failed', issues: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const filters = parseResult.data as SearchFilters;
+
     console.log('Search request received with filters:', filters);
     
     // If offline mode is disabled, use the actual Discogs API

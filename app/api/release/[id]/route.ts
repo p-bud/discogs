@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { getReleaseCommunityData } from '../../../utils/collection';
 
 export const dynamic = 'force-dynamic';
@@ -10,19 +9,8 @@ export async function GET(
 ): Promise<NextResponse> {
   try {
     const releaseId = params.id;
-    
-    // Check for auth
-    const cookieStore = cookies();
-    const hasAuth = cookieStore.has('discogs_oauth_token') && cookieStore.has('discogs_oauth_token_secret');
-    
-    if (!hasAuth) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-    
-    // Get the release details
+
+    // Auth is enforced by middleware.ts — no duplicate check needed here.
     const releaseDetails = await getReleaseCommunityData(releaseId);
     
     return NextResponse.json(releaseDetails);

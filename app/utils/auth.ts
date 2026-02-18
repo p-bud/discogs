@@ -1,4 +1,4 @@
-import CryptoJS from 'crypto-js';
+import { createHmac, randomBytes } from 'crypto';
 
 const DISCOGS_REQUEST_TOKEN_URL = 'https://api.discogs.com/oauth/request_token';
 const DISCOGS_AUTHORIZE_URL = 'https://www.discogs.com/oauth/authorize';
@@ -21,42 +21,29 @@ interface OAuthRequestOptions {
 }
 
 /**
- * A simplified OAuth 1.0a implementation specifically for Discogs
- * 
- * This is a partial implementation that handles what we need for Discogs API
- * In a production app, you would use a full OAuth library
+ * OAuth 1.0a implementation for Discogs.
+ * Uses Node.js native crypto (no CryptoJS dependency).
  */
 export class DiscogsOAuth {
   private consumer: OAuthConsumer;
   private signatureMethod: string;
 
   constructor(consumerKey?: string, consumerSecret?: string) {
-    // Read env vars at call time so the value is correct even if the module
-    // was imported before the environment was fully initialised.
     const key = consumerKey ?? process.env.DISCOGS_CONSUMER_KEY ?? '';
     const secret = consumerSecret ?? process.env.DISCOGS_CONSUMER_SECRET ?? '';
-    this.consumer = {
-      key,
-      secret,
-    };
+    this.consumer = { key, secret };
     this.signatureMethod = 'HMAC-SHA1';
   }
 
-  /**
-   * Create an OAuth 1.0a signature
-   */
   private createSignature(
-    baseString: string, 
-    consumerSecret: string, 
+    baseString: string,
+    consumerSecret: string,
     tokenSecret: string = ''
   ): string {
-    const key = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
-    return CryptoJS.HmacSHA1(baseString, key).toString(CryptoJS.enc.Base64);
+    const signingKey = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
+    return createHmac('sha1', signingKey).update(baseString).digest('base64');
   }
 
-  /**
-   * Extract query parameters from URL
-   */
   private extractQueryParams(url: string): Record<string, string> {
     const params: Record<string, string> = {};
     try {
@@ -64,122 +51,84 @@ export class DiscogsOAuth {
       urlObj.searchParams.forEach((value, key) => {
         params[key] = value;
       });
-    } catch (error) {
-      console.error('Invalid URL format for extracting params:', url);
+    } catch {
+      // Ignore invalid URLs
     }
     return params;
   }
 
-  /**
-   * Create the signature base string
-   */
   private createSignatureBaseString(
     method: string,
     url: string,
     params: Record<string, string>
   ): string {
-    // Remove query parameters from the URL
     let baseUrl = url;
     try {
       const urlObj = new URL(url);
       baseUrl = `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}`;
-    } catch (error) {
-      console.error('Invalid URL format:', url);
+    } catch {
+      // Ignore invalid URLs
     }
 
-    // Sort parameters alphabetically
     const sortedParams = Object.keys(params)
       .sort()
       .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
       .join('&');
 
-    // Properly format and encode components exactly as specified by OAuth 1.0a
-    const encodedUrl = encodeURIComponent(baseUrl);
-    const encodedParams = encodeURIComponent(sortedParams);
-    
-    return `${method.toUpperCase()}&${encodedUrl}&${encodedParams}`;
+    return `${method.toUpperCase()}&${encodeURIComponent(baseUrl)}&${encodeURIComponent(sortedParams)}`;
   }
 
-  /**
-   * Generate OAuth parameters
-   */
   authorize(
     request: OAuthRequestOptions,
     token: OAuthToken | null = null,
     consumer: OAuthConsumer | null = null
   ): Record<string, string> {
-    // Use provided consumer or default
     const activeConsumer = consumer || this.consumer;
-    
-    // Create timestamp and nonce
-    const timestamp = Math.floor(Date.now() / 1000).toString();
-    const array = new Uint8Array(16);
-    crypto.getRandomValues(array);
-    const nonce = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 
-    // Create OAuth parameters
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const nonce = randomBytes(16).toString('hex');
+
     const oauthParams: Record<string, string> = {
       oauth_consumer_key: activeConsumer.key,
       oauth_nonce: nonce,
       oauth_signature_method: this.signatureMethod,
       oauth_timestamp: timestamp,
-      oauth_version: '1.0'
+      oauth_version: '1.0',
     };
 
-    // Add token if provided
-    if (token && token.key) {
+    if (token?.key) {
       oauthParams.oauth_token = token.key;
     }
 
-    // Extract query parameters from URL
     const urlParams = this.extractQueryParams(request.url);
-    
-    // Combine all parameters: OAuth + URL query params + request data
     const allParams = { ...oauthParams, ...urlParams };
     if (request.data) {
-      Object.keys(request.data).forEach(key => {
-        allParams[key] = request.data![key];
-      });
+      Object.assign(allParams, request.data);
     }
 
-    // Create signature base string, using the URL without query parameters
     let baseUrl = request.url;
     try {
       const urlObj = new URL(request.url);
       baseUrl = `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}`;
-    } catch (error) {
-      console.error('Invalid URL in authorize:', request.url);
-    }
-    
-    const baseString = this.createSignatureBaseString(
-      request.method,
-      baseUrl,
-      allParams
-    );
-    
-    // Debug logging - only log in development and only when there's an issue
-    if (process.env.NODE_ENV !== 'production' && process.env.DEBUG_OAUTH === 'true') {
-      console.log('Base string for signature:', baseString);
+    } catch {
+      // Ignore invalid URLs
     }
 
-    // Add signature
+    const baseString = this.createSignatureBaseString(request.method, baseUrl, allParams);
+
+    if (process.env.NODE_ENV !== 'production' && process.env.DEBUG_OAUTH === 'true') {
+      console.log('OAuth base string:', baseString);
+    }
+
     oauthParams.oauth_signature = this.createSignature(
       baseString,
       activeConsumer.secret,
-      token ? token.secret : ''
+      token?.secret ?? ''
     );
-    
-    // Only log in development and when debugging is enabled
-    if (process.env.NODE_ENV !== 'production' && process.env.DEBUG_OAUTH === 'true') {
-      console.log('Generated signature:', oauthParams.oauth_signature);
-    }
 
     return oauthParams;
   }
 
-  /**
-   * Generate OAuth header
-   */
   toHeader(oauthParams: Record<string, string>): Record<string, string> {
     const header = Object.keys(oauthParams)
       .filter(key => key.startsWith('oauth_'))
@@ -190,13 +139,10 @@ export class DiscogsOAuth {
   }
 }
 
-// Export OAuth endpoint URLs and credentials.
-// Consumer key/secret are exposed as getters so they are read from process.env
-// at access time rather than being frozen to undefined at module-load time.
 export const apiConfig = {
   get DISCOGS_CONSUMER_KEY() { return process.env.DISCOGS_CONSUMER_KEY ?? ''; },
   get DISCOGS_CONSUMER_SECRET() { return process.env.DISCOGS_CONSUMER_SECRET ?? ''; },
   DISCOGS_REQUEST_TOKEN_URL,
   DISCOGS_AUTHORIZE_URL,
   DISCOGS_ACCESS_TOKEN_URL,
-}; 
+};
