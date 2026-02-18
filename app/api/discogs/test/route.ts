@@ -6,8 +6,12 @@ import { DiscogsOAuth, apiConfig } from '@/app/utils/auth';
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic';
 
-// A simple test endpoint to verify Discogs API credentials
+// A simple test endpoint to verify Discogs API credentials — dev only
 export async function GET() {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   try {
     console.log('Testing Discogs API credentials...');
     
@@ -85,4 +89,5 @@ export async function GET() {
   }
 }
 
-export const runtime = 'edge'; 
+// Removed: export const runtime = 'edge'
+// This route uses Node.js crypto (via DiscogsOAuth) and cookies — must stay on Node.js runtime.

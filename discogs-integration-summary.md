@@ -52,8 +52,8 @@ This document provides a summary of the Discogs API integration implemented in t
 ## Implementation Details
 
 ### API Credentials
-- Consumer Key: `gNzKxthQDOyjiCBynacq`
-- Consumer Secret: `afUtCRzXvHfdaJGapoQgpocinQjMXPnp`
+- Consumer Key: `[REDACTED — rotate immediately if exposed]`
+- Consumer Secret: `[REDACTED — rotate immediately if exposed]`
 - API Endpoints:
   - Request Token URL: `https://api.discogs.com/oauth/request_token`
   - Authorize URL: `https://www.discogs.com/oauth/authorize`

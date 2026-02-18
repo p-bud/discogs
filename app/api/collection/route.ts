@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { z } from 'zod';
 import { getUserCollection } from '../../utils/collection';
+
+const UsernameSchema = z
+  .string()
+  .min(1)
+  .max(100)
+  .regex(/^[a-zA-Z0-9._-]+$/, 'Invalid Discogs username');
 
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic';
@@ -16,24 +22,21 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(req.url);
     const username = searchParams.get('username');
-  
-    // Check for auth
-    const cookieStore = cookies();
-    const hasAuth = cookieStore.has('discogs_oauth_token') && cookieStore.has('discogs_oauth_token_secret');
-    
-    if (!hasAuth) {
-      return NextResponse.json({ error: 'Authentication required. Please login with Discogs first.' }, { status: 401 });
-    }
-    
-    if (!username) {
-      return NextResponse.json({ error: 'Username is required' }, { status: 400 });
+
+    // Auth is enforced by middleware.ts — no duplicate check needed here.
+    const parsed = UsernameSchema.safeParse(username);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid username', issues: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
     
     console.time('collection-fetch'); // Add timing for debugging
     
     // Get the collection (basic info only, fast)
     try {
-      const collection = await getUserCollection(username);
+      const collection = await getUserCollection(parsed.data);
       
       console.timeEnd('collection-fetch'); // Log how long it took
       
