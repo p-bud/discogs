@@ -9,6 +9,17 @@ export const dynamic = 'force-dynamic';
 
 // Handler for GET requests to /api/auth
 export async function GET() {
+  // Validate required env vars before touching any OAuth logic.
+  const missing: string[] = [];
+  if (!process.env.DISCOGS_CONSUMER_KEY) missing.push('DISCOGS_CONSUMER_KEY');
+  if (!process.env.DISCOGS_CONSUMER_SECRET) missing.push('DISCOGS_CONSUMER_SECRET');
+  if (missing.length > 0) {
+    return NextResponse.json(
+      { error: 'Missing required environment variables for Discogs OAuth.', missing },
+      { status: 503 }
+    );
+  }
+
   try {
     // Create a new OAuth instance
     const oauth = new DiscogsOAuth();
