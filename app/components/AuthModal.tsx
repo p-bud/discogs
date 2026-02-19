@@ -70,8 +70,9 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
     setError(null);
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      // Route through /auth/callback to exchange the code, then on to /auth/reset-password.
-      redirectTo: `${appUrl}/auth/callback?next=/auth/reset-password`,
+      // Supabase drops custom query params from redirectTo, so send directly to the reset page.
+      // The reset page handles the ?code= exchange client-side.
+      redirectTo: `${appUrl}/auth/reset-password`,
     });
     setLoading(false);
     if (error) { setError(error.message); return; }
