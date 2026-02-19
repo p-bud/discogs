@@ -13,31 +13,76 @@ export default function ResetPasswordPage() {
   const [ready, setReady] = useState(false);
   const router = useRouter();
 
-  // Exchange the PKCE code (from the reset email link) for a session, then show the form.
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
+
+    // Supabase password reset emails can arrive in three formats:
+    //  1. PKCE:     ?code=XXX               → exchangeCodeForSession
+    //  2. token_hash: ?token_hash=XXX&type=recovery → verifyOtp
+    //  3. Implicit: #access_token=XXX&type=recovery → onAuthStateChange fires PASSWORD_RECOVERY
+    // Handle all three so the flow works regardless of Supabase project config.
+
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
+    const tokenHash = params.get('token_hash');
+    const type = params.get('type');
+
+    // Subscribe first so we catch the PASSWORD_RECOVERY event from implicit flow (#hash).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setReady(true);
+        setError(null);
+      }
+    });
 
     async function init() {
       if (code) {
+        // PKCE flow — exchange the authorisation code for a session.
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (exchangeError) {
-          setError('This link has expired or already been used. Request a new reset link.');
+          console.error('exchangeCodeForSession error:', exchangeError.message);
+          // Fall through to token_hash / session check before giving up.
+        } else {
+          window.history.replaceState({}, '', '/auth/reset-password');
+          setReady(true);
           return;
         }
-        // Remove the code from the URL so refreshing doesn't re-exchange a consumed code.
-        window.history.replaceState({}, '', '/auth/reset-password');
       }
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setReady(true);
-      } else {
-        setError('This link has expired or already been used. Request a new reset link.');
+
+      if (tokenHash && type === 'recovery') {
+        // token_hash flow.
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: 'recovery',
+        });
+        if (verifyError) {
+          console.error('verifyOtp error:', verifyError.message);
+        } else {
+          window.history.replaceState({}, '', '/auth/reset-password');
+          setReady(true);
+          return;
+        }
       }
+
+      // Implicit flow or already-authenticated session — check for an active session.
+      // (onAuthStateChange above will fire PASSWORD_RECOVERY if the hash fragment is present.)
+      if (!window.location.hash.includes('access_token')) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setReady(true);
+        } else if (!code && !tokenHash) {
+          // No params at all — show an error.
+          setError('This link has expired or already been used. Request a new reset link.');
+        } else {
+          // Had params but exchanges failed.
+          setError('This link has expired or already been used. Request a new reset link.');
+        }
+      }
+      // If hash contains access_token, wait for onAuthStateChange PASSWORD_RECOVERY event.
     }
 
     init();
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
