@@ -39,6 +39,11 @@ const Header: React.FC = () => {
               </Link>
             </li>
             <li>
+              <Link href="/leaderboard" className="block py-2 px-3 text-minimal-gray-700 hover:text-minimal-accent hover:bg-minimal-gray-50 rounded transition-colors duration-200">
+                Leaderboard
+              </Link>
+            </li>
+            <li>
               <Link href="/about" className="block py-2 px-3 text-minimal-gray-700 hover:text-minimal-accent hover:bg-minimal-gray-50 rounded transition-colors duration-200">
                 About
               </Link>

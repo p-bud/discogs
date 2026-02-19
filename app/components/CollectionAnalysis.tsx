@@ -1,15 +1,25 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useReleaseDetails } from '../hooks/useReleaseDetails';
 import { CollectionItem, CollectionStats } from '../models/types';
 import { calculateCollectionStats } from '../utils/client-collection';
+import AuthModal from './AuthModal';
 
 export interface CollectionAnalysisProps {
   username?: string;
   onUsernameChange?: (username: string) => void;
 }
+
+interface AuthInfo {
+  discogsConnected: boolean;
+  discogsUsername: string | null;
+  supabaseUserId: string | null;
+  supabaseLinkedUsername: string | null;
+}
+
+type SubmitState = 'idle' | 'submitting' | 'success' | 'error';
 
 export default function CollectionAnalysis({ username: propUsername }: CollectionAnalysisProps) {
   const [username, setUsername] = useState(propUsername || '');
@@ -20,11 +30,19 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
   const [limitedResults, setLimitedResults] = useState(false);
-  
-  // New state for tracking client-side community data loading
   const [detailsLoading, setDetailsLoading] = useState(false);
-  
-  // Use our custom hook to fetch community data for each release
+
+  // Auth state for leaderboard submission
+  const [authInfo, setAuthInfo] = useState<AuthInfo>({
+    discogsConnected: false,
+    discogsUsername: null,
+    supabaseUserId: null,
+    supabaseLinkedUsername: null,
+  });
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [submitState, setSubmitState] = useState<SubmitState>('idle');
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const {
     enrichedReleases,
     loading: communityDataLoading,
@@ -32,67 +50,82 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
     completed,
     error: communityDataError
   } = useReleaseDetails(collection);
-  
-  // Update the stats when enriched data becomes available
+
+  // Fetch auth info on mount and auto-populate username.
+  const refreshAuthInfo = useCallback(async () => {
+    try {
+      const res = await fetch('/api/auth/status');
+      if (!res.ok) return;
+      const data = await res.json();
+      setAuthInfo({
+        discogsConnected: data.authenticated ?? false,
+        discogsUsername: data.username ?? null,
+        supabaseUserId: data.supabaseUserId ?? null,
+        supabaseLinkedUsername: data.supabaseLinkedUsername ?? null,
+      });
+      // Auto-populate username if connected and field is empty.
+      if (data.username && !username) {
+        setUsername(data.username);
+      }
+    } catch {
+      // Non-fatal — user can still enter username manually.
+    }
+  }, [username]);
+
+  useEffect(() => {
+    refreshAuthInfo();
+  }, []);
+
+  // Update stats when enriched data becomes available.
   useEffect(() => {
     if (enrichedReleases.length > 0) {
-      // Don't update collection state here - that would cause an infinite loop
-      
-      // Calculate stats with the enriched data that now has community info
       if (completed && enrichedReleases.some(r => r.haveCount > 0 || r.wantCount > 0)) {
         const calculatedStats = calculateCollectionStats(enrichedReleases);
         setStats(calculatedStats);
       }
     }
   }, [enrichedReleases, completed]);
-  
-  // Track any errors from community data loading
+
   useEffect(() => {
     if (communityDataError && !error) {
       setError(`Error loading community data: ${communityDataError}`);
     }
   }, [communityDataError, error]);
-  
+
   useEffect(() => {
     if (propUsername) {
       setUsername(propUsername);
       fetchCollection(propUsername);
     }
   }, [propUsername]);
-  
+
   const fetchCollection = async (usernameToFetch = username) => {
     if (!usernameToFetch) {
       setError('Please enter a Discogs username');
       return;
     }
-    
+
     setLoading(true);
     setError(null);
     setCollection([]);
     setStats(null);
     setLoadingMessage('Fetching your collection from Discogs...');
     setDetailsLoading(false);
-    
+    setSubmitState('idle');
+    setSubmitError(null);
+
     try {
       const response = await fetch(`/api/collection?username=${encodeURIComponent(usernameToFetch)}`);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
-      
-      // Set the basic collection data right away
       setCollection(data.releases);
-      
-      // Show limited results message if applicable
       setLimitedResults(data.limitedResults || false);
-      
-      // Set initial stats
       setStats(data.stats);
-      
-      // Now client will automatically start fetching community data for each release
       setLoadingMessage(null);
       setDetailsLoading(true);
     } catch (err: any) {
@@ -101,6 +134,38 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
       setLoadingMessage(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitToLeaderboard = async () => {
+    if (!stats || !enrichedReleases.length) return;
+    setSubmitState('submitting');
+    setSubmitError(null);
+
+    const payload = {
+      avg_rarity_score: stats.averageRarityScore,
+      rarest_item_score: stats.rarestItems[0]?.rarityScore ?? 0,
+      rarest_item_title: stats.rarestItems[0]?.title ?? '',
+      rarest_item_artist: stats.rarestItems[0]?.artist ?? '',
+      collection_size: collection.length,
+    };
+
+    try {
+      const res = await fetch('/api/leaderboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? 'Submission failed');
+      }
+
+      setSubmitState('success');
+    } catch (err: any) {
+      setSubmitState('error');
+      setSubmitError(err.message ?? 'Submission failed');
     }
   };
 
@@ -149,36 +214,25 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
                       <span className="text-indigo-600">{item.rarityScore.toFixed(2)}</span>
                     </div>
                   )}
-
                   {activeTab === 'fewestHaves' && (
                     <div className="flex justify-between text-sm font-bold">
                       <span>Scarcity:</span>
                       <span className="text-indigo-600">{item.haveCount} owners</span>
                     </div>
                   )}
-
                   {activeTab === 'mostWanted' && (
                     <div className="flex justify-between text-sm font-bold">
                       <span>Demand:</span>
                       <span className="text-indigo-600">{item.wantCount} wants</span>
                     </div>
                   )}
-
                   {activeTab === 'collectible' && (
                     <div className="flex justify-between text-sm font-bold">
                       <span>Collectible Score:</span>
                       <span className="text-indigo-600">{((item.haveCount * item.wantCount) / 1000).toFixed(1)}</span>
                     </div>
                   )}
-
-                  {activeTab === 'common' && (
-                    <div className="flex justify-between text-sm font-bold">
-                      <span>Rarity Score:</span>
-                      <span className="text-indigo-600">{item.rarityScore.toFixed(2)}</span>
-                    </div>
-                  )}
-
-                  {activeTab === 'all' && (
+                  {(activeTab === 'common' || activeTab === 'all') && (
                     <div className="flex justify-between text-sm font-bold">
                       <span>Rarity Score:</span>
                       <span className="text-indigo-600">{item.rarityScore.toFixed(2)}</span>
@@ -193,35 +247,79 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
     );
   };
 
-  const renderLoading = () => {
-    return (
-      <div className="text-center py-12">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600 mb-4"></div>
-        <p className="mt-2 text-lg font-medium">{loadingMessage}</p>
-        {error && (
-          <p className="mt-2 text-red-500 font-bold">
-            {error}
+  const renderLoading = () => (
+    <div className="text-center py-12">
+      <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600 mb-4"></div>
+      <p className="mt-2 text-lg font-medium">{loadingMessage}</p>
+      {error && <p className="mt-2 text-red-500 font-bold">{error}</p>}
+    </div>
+  );
+
+  // --- Leaderboard submission panel ---
+  const renderLeaderboardPanel = () => {
+    if (!completed || !stats) return null;
+
+    const { discogsConnected, supabaseUserId, supabaseLinkedUsername } = authInfo;
+    const canSubmit = supabaseUserId && (supabaseLinkedUsername || discogsConnected);
+
+    if (submitState === 'success') {
+      return (
+        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+          <span className="text-green-700 font-medium">Submitted to leaderboard!</span>
+          <a href="/leaderboard" className="text-green-600 underline text-sm">View leaderboard</a>
+        </div>
+      );
+    }
+
+    if (!supabaseUserId) {
+      return (
+        <div className="mt-6 p-4 bg-minimal-gray-50 border border-minimal-gray-200 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <p className="text-sm text-minimal-gray-600 flex-1">
+            Create a free account to appear on the leaderboard.
           </p>
-        )}
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="btn-primary px-4 py-2 text-sm rounded-md whitespace-nowrap"
+          >
+            Create account
+          </button>
+        </div>
+      );
+    }
+
+    if (!canSubmit) {
+      return (
+        <div className="mt-6 p-4 bg-minimal-gray-50 border border-minimal-gray-200 rounded-lg">
+          <p className="text-sm text-minimal-gray-600">
+            Connect your Discogs account to submit to the leaderboard.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-6 p-4 bg-minimal-gray-50 border border-minimal-gray-200 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="flex-1">
+          <p className="text-sm font-medium text-minimal-gray-800">Submit your results to the leaderboard?</p>
+          <p className="text-xs text-minimal-gray-500 mt-0.5">
+            Avg rarity: {stats.averageRarityScore.toFixed(4)} · {collection.length} records
+          </p>
+          {submitState === 'error' && (
+            <p className="text-xs text-red-600 mt-1">{submitError}</p>
+          )}
+        </div>
+        <button
+          onClick={handleSubmitToLeaderboard}
+          disabled={submitState === 'submitting'}
+          className="btn-primary px-4 py-2 text-sm rounded-md whitespace-nowrap disabled:opacity-60"
+        >
+          {submitState === 'submitting' ? 'Submitting…' : 'Submit to Leaderboard'}
+        </button>
       </div>
     );
   };
 
-  const handleCollectionError = (error: Error) => {
-    setError(error.message);
-    
-    // If the error is specifically a timeout error, attempt to get cached results
-    if (error.message.includes('timed out') || error.message.includes('timeout')) {
-      // Attempt to get cached/partial results
-      setTimeout(() => {
-        fetchCollection();
-      }, 2000);
-    }
-  };
-
-  if (loading) {
-    return renderLoading();
-  }
+  if (loading) return renderLoading();
 
   if (error) {
     return (
@@ -231,20 +329,19 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
           Make sure you're logged in to Discogs and have entered a valid username.
           {error.includes('rate limit') && (
             <span className="block mt-2">
-              The Discogs API has strict rate limits (60 requests per minute). 
-              Our app uses caching to minimize this issue, but you might need to wait a few minutes 
-              before trying again.
+              The Discogs API has strict rate limits (60 requests per minute).
+              Our app uses caching to minimize this issue, but you might need to wait a few minutes before trying again.
             </span>
           )}
           {error.includes('timed out') && (
             <span className="block mt-2">
-              Timeout issues can occur when the Discogs API is busy or experiencing delays. 
+              Timeout issues can occur when the Discogs API is busy or experiencing delays.
               We've limited analysis to your collection to minimize this, but occasional timeouts may still occur.
             </span>
           )}
         </p>
         <div className="mt-4 flex flex-col sm:flex-row gap-2">
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="bg-red-100 hover:bg-red-200 text-red-800 font-medium py-2 px-4 rounded"
           >
@@ -255,11 +352,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
               onClick={() => {
                 setLoading(true);
                 setLoadingMessage('Checking cache for partial results...');
-                
-                // Attempt to get cached/partial results
-                setTimeout(() => {
-                  fetchCollection();
-                }, 2000);
+                setTimeout(() => fetchCollection(), 2000);
               }}
               className="bg-blue-100 hover:bg-blue-200 text-blue-800 font-medium py-2 px-4 rounded"
             >
@@ -271,12 +364,8 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
               onClick={() => {
                 setLoading(true);
                 const waitTime = 5000;
-                setLoadingMessage(`Waiting ${Math.round(waitTime/1000)} seconds before retry to avoid timeout...`);
-                
-                // Add a delay before retrying to give the API time to recover
-                setTimeout(() => {
-                  fetchCollection();
-                }, waitTime);
+                setLoadingMessage(`Waiting ${Math.round(waitTime / 1000)} seconds before retry to avoid timeout...`);
+                setTimeout(() => fetchCollection(), waitTime);
               }}
               className="bg-green-100 hover:bg-green-200 text-green-800 font-medium py-2 px-4 rounded"
             >
@@ -308,16 +397,21 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
             Analyze
           </button>
         </div>
+        {authInfo.discogsConnected && authInfo.discogsUsername && (
+          <p className="text-xs text-minimal-gray-500 mt-1.5">
+            Signed in as <span className="font-medium">{authInfo.discogsUsername}</span>
+          </p>
+        )}
       </div>
 
       {loading && renderLoading()}
-      
+
       {error && (
         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-8" role="alert">
           <p>{error}</p>
         </div>
       )}
-      
+
       {!loading && stats && (
         <div className="mb-8">
           <div className="flex flex-wrap mb-4">
@@ -330,7 +424,6 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
             </div>
           </div>
 
-          {/* Show the explanation of how it works */}
           <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100">
             <h3 className="text-lg font-semibold mb-2 text-blue-800">How This Works</h3>
             <p className="mb-2 text-sm text-blue-700">
@@ -365,38 +458,21 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
 
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="flex border-b">
-              <button
-                onClick={() => setActiveTab('rarest')}
-                className={`px-4 py-2 text-sm font-medium ${activeTab === 'rarest' ? 'text-indigo-700 border-b-2 border-indigo-500' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Rarest Items
-              </button>
-              <button
-                onClick={() => setActiveTab('fewestHaves')}
-                className={`px-4 py-2 text-sm font-medium ${activeTab === 'fewestHaves' ? 'text-indigo-700 border-b-2 border-indigo-500' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Fewest Haves
-              </button>
-              <button
-                onClick={() => setActiveTab('mostWanted')}
-                className={`px-4 py-2 text-sm font-medium ${activeTab === 'mostWanted' ? 'text-indigo-700 border-b-2 border-indigo-500' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Most Wanted
-              </button>
-              <button
-                onClick={() => setActiveTab('collectible')}
-                className={`px-4 py-2 text-sm font-medium ${activeTab === 'collectible' ? 'text-indigo-700 border-b-2 border-indigo-500' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Most Collectible
-              </button>
-              <button
-                onClick={() => setActiveTab('common')}
-                className={`px-4 py-2 text-sm font-medium ${activeTab === 'common' ? 'text-indigo-700 border-b-2 border-indigo-500' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Most Common
-              </button>
+              {['rarest', 'fewestHaves', 'mostWanted', 'collectible', 'common'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 text-sm font-medium ${activeTab === tab ? 'text-indigo-700 border-b-2 border-indigo-500' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  {tab === 'rarest' ? 'Rarest Items'
+                    : tab === 'fewestHaves' ? 'Fewest Haves'
+                    : tab === 'mostWanted' ? 'Most Wanted'
+                    : tab === 'collectible' ? 'Most Collectible'
+                    : 'Most Common'}
+                </button>
+              ))}
             </div>
-            
+
             <div className="p-4">
               {activeTab === 'rarest' && stats && (
                 <div>
@@ -404,7 +480,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
                   <p className="text-sm text-gray-600 mb-3">Records with the highest ratio of wants to haves are typically the most sought after compared to availability.</p>
                   {communityDataLoading && !completed ? (
                     <p className="text-gray-500 italic py-4">Loading rarity data...</p>
-                  ) : stats.rarestItems && stats.rarestItems.length > 0 ? (
+                  ) : stats.rarestItems?.length > 0 ? (
                     renderCollectionItems(stats.rarestItems)
                   ) : (
                     <p className="text-gray-500 italic py-4">No rarity data available yet. Still loading...</p>
@@ -418,7 +494,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
                   <p className="text-sm text-gray-600 mb-3">The records that very few Discogs users have in their collections.</p>
                   {communityDataLoading && !completed ? (
                     <p className="text-gray-500 italic py-4">Loading rarity data...</p>
-                  ) : stats.fewestHaves && stats.fewestHaves.length > 0 ? (
+                  ) : stats.fewestHaves?.length > 0 ? (
                     renderCollectionItems(stats.fewestHaves)
                   ) : (
                     <p className="text-gray-500 italic py-4">No have/want data available yet. Still loading...</p>
@@ -432,35 +508,35 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
                   <p className="text-sm text-gray-600 mb-3">The records that the most Discogs users have added to their wantlists.</p>
                   {communityDataLoading && !completed ? (
                     <p className="text-gray-500 italic py-4">Loading rarity data...</p>
-                  ) : stats.mostWanted && stats.mostWanted.length > 0 ? (
+                  ) : stats.mostWanted?.length > 0 ? (
                     renderCollectionItems(stats.mostWanted)
                   ) : (
                     <p className="text-gray-500 italic py-4">No have/want data available yet. Still loading...</p>
                   )}
                 </div>
               )}
-              
+
               {activeTab === 'collectible' && stats && (
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Your Most Collectible Records</h3>
                   <p className="text-sm text-gray-600 mb-3">Records that are widely collected but still in high demand.</p>
                   {communityDataLoading && !completed ? (
                     <p className="text-gray-500 italic py-4">Loading rarity data...</p>
-                  ) : stats.mostCollectible && stats.mostCollectible.length > 0 ? (
+                  ) : stats.mostCollectible?.length > 0 ? (
                     renderCollectionItems(stats.mostCollectible)
                   ) : (
                     <p className="text-gray-500 italic py-4">No have/want data available yet. Still loading...</p>
                   )}
                 </div>
               )}
-              
+
               {activeTab === 'common' && stats && (
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Your Most Common Records</h3>
                   <p className="text-sm text-gray-600 mb-3">Records with the lowest want/have ratio.</p>
                   {communityDataLoading && !completed ? (
                     <p className="text-gray-500 italic py-4">Loading rarity data...</p>
-                  ) : stats.mostCommonItems && stats.mostCommonItems.length > 0 ? (
+                  ) : stats.mostCommonItems?.length > 0 ? (
                     renderCollectionItems(stats.mostCommonItems)
                   ) : (
                     <p className="text-gray-500 italic py-4">No have/want data available yet. Still loading...</p>
@@ -469,8 +545,20 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
               )}
             </div>
           </div>
+
+          {/* Leaderboard submission panel — shown after analysis completes */}
+          {renderLeaderboardPanel()}
         </div>
       )}
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthSuccess={() => {
+          setShowAuthModal(false);
+          refreshAuthInfo();
+        }}
+      />
     </div>
   );
-} 
+}

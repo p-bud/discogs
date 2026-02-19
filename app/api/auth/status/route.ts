@@ -2,47 +2,82 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { DiscogsOAuth } from '@/app/utils/auth';
+import { createSupabaseServerClient } from '@/app/utils/supabase-server';
+import { getSupabaseClient } from '@/app/utils/supabase';
 
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    // --- Discogs auth check ---
     const cookieStore = cookies();
     const oauthToken = cookieStore.get('discogs_oauth_token')?.value;
     const oauthTokenSecret = cookieStore.get('discogs_oauth_token_secret')?.value;
 
-    if (!oauthToken || !oauthTokenSecret) {
-      return NextResponse.json({ authenticated: false });
-    }
+    let discogsAuthenticated = false;
+    let discogsUsername: string | null = null;
 
-    // Validate the token by calling the lightweight Discogs identity endpoint.
-    try {
-      const identityUrl = 'https://api.discogs.com/oauth/identity';
-      const oauth = new DiscogsOAuth();
-      const oauthParams = oauth.authorize(
-        { url: identityUrl, method: 'GET' },
-        { key: oauthToken, secret: oauthTokenSecret }
-      );
-      const authHeaders = oauth.toHeader(oauthParams);
-      authHeaders['User-Agent'] = 'DiscogsBarginFinder/1.0';
+    if (oauthToken && oauthTokenSecret) {
+      // Validate the token by calling the lightweight Discogs identity endpoint.
+      try {
+        const identityUrl = 'https://api.discogs.com/oauth/identity';
+        const oauth = new DiscogsOAuth();
+        const oauthParams = oauth.authorize(
+          { url: identityUrl, method: 'GET' },
+          { key: oauthToken, secret: oauthTokenSecret }
+        );
+        const authHeaders = oauth.toHeader(oauthParams);
+        authHeaders['User-Agent'] = 'DiscogsBarginFinder/1.0';
 
-      const response = await axios.get(identityUrl, { headers: authHeaders, timeout: 5000 });
-      const username = response.data?.username ?? null;
-
-      return NextResponse.json({ authenticated: true, username });
-    } catch (identityError: any) {
-      // 401 from Discogs means the token is revoked/expired — clear cookies.
-      if (axios.isAxiosError(identityError) && identityError.response?.status === 401) {
-        const res = NextResponse.json({ authenticated: false });
-        res.cookies.delete('discogs_oauth_token');
-        res.cookies.delete('discogs_oauth_token_secret');
-        return res;
+        const response = await axios.get(identityUrl, { headers: authHeaders, timeout: 5000 });
+        discogsUsername = response.data?.username ?? null;
+        discogsAuthenticated = true;
+      } catch (identityError: any) {
+        if (axios.isAxiosError(identityError) && identityError.response?.status === 401) {
+          // Token revoked/expired — caller will get cookies cleared via the response below.
+          const res = NextResponse.json({ authenticated: false });
+          res.cookies.delete('discogs_oauth_token');
+          res.cookies.delete('discogs_oauth_token_secret');
+          return res;
+        }
+        console.error('Auth identity check error:', identityError);
       }
-      // Network/timeout errors: don't invalidate the token, just report unauthenticated.
-      console.error('Auth identity check error:', identityError);
-      return NextResponse.json({ authenticated: false, error: 'Could not verify token' });
     }
+
+    // --- Supabase auth check ---
+    let supabaseUserId: string | null = null;
+    let supabaseLinkedUsername: string | null = null;
+
+    try {
+      const supabase = createSupabaseServerClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        supabaseUserId = user.id;
+
+        // Fetch linked Discogs username from user_profiles (use service-role to bypass RLS).
+        const adminClient = getSupabaseClient();
+        if (adminClient) {
+          const { data } = await adminClient
+            .from('user_profiles')
+            .select('discogs_username')
+            .eq('id', user.id)
+            .single();
+          supabaseLinkedUsername = data?.discogs_username ?? null;
+        }
+      }
+    } catch (supabaseError) {
+      // Non-fatal — Discogs auth remains valid independently.
+      console.error('Supabase auth check error:', supabaseError);
+    }
+
+    return NextResponse.json({
+      authenticated: discogsAuthenticated,
+      username: discogsUsername,
+      supabaseUserId,
+      supabaseLinkedUsername,
+    });
   } catch (error) {
     console.error('Auth status check error:', error);
     return NextResponse.json(

@@ -2,6 +2,8 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import { DiscogsOAuth, apiConfig } from '@/app/utils/auth';
+import { createSupabaseServerClient } from '@/app/utils/supabase-server';
+import { getSupabaseClient } from '@/app/utils/supabase';
 
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic';
@@ -67,6 +69,46 @@ export async function GET(request: NextRequest) {
     if (!accessToken || !accessTokenSecret) {
       console.error('Invalid access token response from Discogs');
       return NextResponse.redirect(new URL('/?auth_error=invalid_access_token', request.url));
+    }
+
+    // Fetch the Discogs identity (username) for the newly authenticated user.
+    let discogsUsername: string | null = null;
+    try {
+      const identityUrl = 'https://api.discogs.com/oauth/identity';
+      const identityOauthParams = oauth.authorize(
+        { url: identityUrl, method: 'GET' },
+        { key: accessToken, secret: accessTokenSecret }
+      );
+      const identityHeaders = oauth.toHeader(identityOauthParams);
+      identityHeaders['User-Agent'] = 'DiscogsBarginFinder/1.0';
+      const identityResp = await axios.get(identityUrl, { headers: identityHeaders, timeout: 5000 });
+      discogsUsername = identityResp.data?.username ?? null;
+    } catch (err) {
+      console.error('Could not fetch Discogs identity after OAuth:', err);
+    }
+
+    // If there's a logged-in Supabase user, link their Discogs username to their profile.
+    if (discogsUsername) {
+      try {
+        const supabaseAuth = createSupabaseServerClient();
+        const { data: { user } } = await supabaseAuth.auth.getUser();
+
+        if (user) {
+          // Use the service-role client to bypass RLS for this server-side upsert.
+          const adminClient = getSupabaseClient();
+          if (adminClient) {
+            await adminClient
+              .from('user_profiles')
+              .upsert(
+                { id: user.id, discogs_username: discogsUsername },
+                { onConflict: 'id' }
+              );
+          }
+        }
+      } catch (err) {
+        // Non-fatal — Discogs auth still succeeds even if profile link fails.
+        console.error('Could not link Discogs username to Supabase profile:', err);
+      }
     }
 
     const responseObj = NextResponse.redirect(new URL('/', request.url));
