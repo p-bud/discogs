@@ -80,7 +80,7 @@ export default function CollectionPage() {
               <li>See your rarest records and how unique your collection is</li>
             </ol>
             <p className="mb-2">You must be logged in to Discogs to access your collection data.</p>
-            <p className="text-sm italic">Note: To stay within Discogs API rate limits, we analyze only your most recent additions. This ensures fast results while avoiding rate limit errors.</p>
+            <p className="text-sm italic">We'll analyze your full collection. Rarity data loads progressively.</p>
           </div>
         )}
       </div>

@@ -5,43 +5,41 @@ import { CollectionItem, CollectionStats } from '../models/types';
 // Don't import at the top level since we're using dynamic imports
 
 // Simple in-memory cache for collection data
-const collectionsCache: Record<string, { data: CollectionItem[], timestamp: number }> = {};
+const collectionsCache: Record<string, { data: CollectionItem[], hitPageCap: boolean, timestamp: number }> = {};
 const releaseCache: Record<string, { data: any, timestamp: number }> = {};
 
 // Cache expiration time (1 hour)
 const CACHE_EXPIRATION = 60 * 60 * 1000;
 
-// Constants for API requests
-const BATCH_SIZE = 5; // Process 5 releases at a time to avoid rate limits
-const MAX_ITEMS = 50; // Increased to 50 items since we're only fetching basic data
-const API_DELAY_MS = 500; // Reduced to 500ms to speed up processing
-
-// Delay between batches (ms)
-const BATCH_DELAY_MS = 500; // Reduced to 500ms to speed up processing
+// Constants for paginated collection fetching
+const PER_PAGE = 100;       // Discogs max per_page
+const MAX_PAGES = 20;       // Safety cap = 2,000 items
+const TIME_BUDGET_MS = 8_000; // Leave headroom before Vercel 10s timeout
 
 /**
- * Get a user's collection from Discogs with only basic data
+ * Get a user's collection from Discogs with only basic data, paginating all pages.
  * @param username The Discogs username
- * @returns Collection items with basic info (without community data)
+ * @returns Collection items with basic info (without community data) and whether the page cap was hit
  */
-export async function getUserCollection(username: string): Promise<CollectionItem[]> {
+export async function getUserCollection(username: string): Promise<{ items: CollectionItem[], hitPageCap: boolean }> {
   try {
     // Check cache first
     const now = Date.now();
-    if (collectionsCache[username] && 
+    if (collectionsCache[username] &&
         now - collectionsCache[username].timestamp < CACHE_EXPIRATION) {
       console.log(`Using cached collection for ${username}`);
-      return collectionsCache[username].data;
+      const cached = collectionsCache[username];
+      return { items: cached.data, hitPageCap: cached.hitPageCap };
     }
-    
+
     // Create Discogs client using the existing auth
     const cookieStore = cookies();
     const hasAuth = cookieStore.has('discogs_oauth_token') && cookieStore.has('discogs_oauth_token_secret');
-    
+
     if (!hasAuth) {
       throw new Error('Authentication required to access collection');
     }
-    
+
     // Import the discogs module dynamically
     let discogs;
     try {
@@ -50,7 +48,7 @@ export async function getUserCollection(username: string): Promise<CollectionIte
       console.error('Error importing discogs module:', importError);
       throw new Error('Failed to initialize Discogs client. Please try again later.');
     }
-    
+
     let discogsClient;
     try {
       discogsClient = discogs.createDiscogsClient();
@@ -58,33 +56,32 @@ export async function getUserCollection(username: string): Promise<CollectionIte
       console.error('Error creating Discogs client:', clientError);
       throw new Error('Failed to create Discogs client. Please check authentication and try again.');
     }
-    
-    console.log(`Fetching ${MAX_ITEMS} most recent collection additions for ${username}`);
-    
-    // Get the user's collection with rate limiting, limiting to MAX_ITEMS most recent additions
-    const getCollection = async () => {
-      const response = await discogsClient.get(`/users/${username}/collection/folders/0/releases`, {
-        params: {
-          sort: 'added',
-          sort_order: 'desc',
-          per_page: MAX_ITEMS
-        }
-      });
-      return response;
-    };
-    
-    // Use rate limiting for the API call
-    const response = await rateLimit(getCollection);
-    
-    // We're only fetching a single page of the most recent items
-    let allReleases = response.data.releases || [];
-    
-    // Limit to MAX_ITEMS to stay within function timeout limits
-    if (allReleases.length > MAX_ITEMS) {
-      console.log(`Limiting releases from ${allReleases.length} to ${MAX_ITEMS} to avoid timeout`);
-      allReleases = allReleases.slice(0, MAX_ITEMS);
-    }
-    
+
+    console.log(`Fetching full collection for ${username} (up to ${MAX_PAGES * PER_PAGE} items)`);
+
+    let page = 1;
+    let totalPages = 1;
+    const allReleases: any[] = [];
+    const startTime = Date.now();
+
+    do {
+      const response = await rateLimit(() =>
+        discogsClient.get(`/users/${username}/collection/folders/0/releases`, {
+          params: { sort: 'added', sort_order: 'desc', per_page: PER_PAGE, page },
+        })
+      );
+      const data = response.data;
+      allReleases.push(...(data.releases ?? []));
+      totalPages = data.pagination?.pages ?? 1;
+      page++;
+    } while (
+      page <= totalPages &&
+      page <= MAX_PAGES &&
+      Date.now() - startTime < TIME_BUDGET_MS
+    );
+
+    const hitPageCap = page <= totalPages;
+
     // Convert to basic collection items (without have/want data)
     const basicItems = allReleases.map((release: any) => ({
       id: release.id,
@@ -97,15 +94,16 @@ export async function getUserCollection(username: string): Promise<CollectionIte
       wantCount: 0,
       rarityScore: 0
     }));
-    
+
     // Cache the results
     collectionsCache[username] = {
       data: basicItems,
+      hitPageCap,
       timestamp: Date.now()
     };
-    
-    console.log(`Processed ${basicItems.length} releases with basic data`);
-    return basicItems;
+
+    console.log(`Processed ${basicItems.length} releases with basic data${hitPageCap ? ' (page cap reached)' : ''}`);
+    return { items: basicItems, hitPageCap };
   } catch (error) {
     console.error('Error fetching collection:', error);
     throw error;
