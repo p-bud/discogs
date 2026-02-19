@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import axios from 'axios';
 import { getSupabaseClient } from '@/app/utils/supabase';
 import { createSupabaseServerClient } from '@/app/utils/supabase-server';
+import { DiscogsOAuth } from '@/app/utils/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,12 +58,50 @@ const SubmitSchema = z.object({
   collection_size: z.number().int().min(0),
 });
 
-export async function POST(request: NextRequest) {
-  // Verify Supabase session.
-  const supabase = createSupabaseServerClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+async function getDiscogsUsernameFromCookies(request: NextRequest): Promise<string | null> {
+  const token = request.cookies.get('discogs_oauth_token')?.value;
+  const secret = request.cookies.get('discogs_oauth_token_secret')?.value;
+  if (!token || !secret) return null;
 
-  if (authError || !user) {
+  try {
+    const identityUrl = 'https://api.discogs.com/oauth/identity';
+    const oauth = new DiscogsOAuth();
+    const oauthParams = oauth.authorize({ url: identityUrl, method: 'GET' }, { key: token, secret });
+    const headers = oauth.toHeader(oauthParams);
+    headers['User-Agent'] = 'DiscogsBarginFinder/1.0';
+    const res = await axios.get(identityUrl, { headers, timeout: 5000 });
+    return res.data?.username ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const adminClient = getSupabaseClient();
+  if (!adminClient) {
+    return NextResponse.json({ error: 'Leaderboard unavailable' }, { status: 503 });
+  }
+
+  // Verify Supabase session — try cookie-based first, then Authorization header.
+  let user = null;
+  try {
+    const supabase = createSupabaseServerClient();
+    const { data } = await supabase.auth.getUser();
+    user = data.user ?? null;
+  } catch { /* ignore */ }
+
+  if (!user) {
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const supabase = createSupabaseServerClient();
+        const { data } = await supabase.auth.getUser(authHeader.slice(7));
+        user = data.user ?? null;
+      } catch { /* ignore */ }
+    }
+  }
+
+  if (!user) {
     return NextResponse.json(
       { error: 'Sign in to submit to the leaderboard.' },
       { status: 401 }
@@ -81,19 +121,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
   }
 
-  const adminClient = getSupabaseClient();
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Leaderboard unavailable' }, { status: 503 });
-  }
-
-  // Look up the user's linked Discogs username.
-  const { data: profile, error: profileError } = await adminClient
+  // Look up linked Discogs username from user_profiles.
+  let discogsUsername: string | null = null;
+  const { data: profile } = await adminClient
     .from('user_profiles')
     .select('discogs_username')
     .eq('id', user.id)
     .single();
 
-  if (profileError || !profile?.discogs_username) {
+  discogsUsername = profile?.discogs_username ?? null;
+
+  // If not linked yet, try to auto-link from Discogs cookies on this request.
+  if (!discogsUsername) {
+    const fetchedUsername = await getDiscogsUsernameFromCookies(request);
+    if (fetchedUsername) {
+      await adminClient
+        .from('user_profiles')
+        .upsert({ id: user.id, discogs_username: fetchedUsername }, { onConflict: 'id' });
+      discogsUsername = fetchedUsername;
+    }
+  }
+
+  if (!discogsUsername) {
     return NextResponse.json(
       { error: 'Connect your Discogs account before submitting to the leaderboard.' },
       { status: 403 }
@@ -102,13 +151,12 @@ export async function POST(request: NextRequest) {
 
   const { avg_rarity_score, rarest_item_score, rarest_item_title, rarest_item_artist, collection_size } = parsed.data;
 
-  // Upsert — one row per discogs_username; updates all scores on re-submit.
   const { error: upsertError } = await adminClient
     .from('leaderboard_entries')
     .upsert(
       {
         user_id: user.id,
-        discogs_username: profile.discogs_username,
+        discogs_username: discogsUsername,
         avg_rarity_score,
         rarest_item_score,
         rarest_item_title,

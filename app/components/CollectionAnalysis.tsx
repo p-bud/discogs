@@ -6,6 +6,7 @@ import { useReleaseDetails } from '../hooks/useReleaseDetails';
 import { CollectionItem, CollectionStats } from '../models/types';
 import { calculateCollectionStats } from '../utils/client-collection';
 import AuthModal from './AuthModal';
+import { createSupabaseBrowserClient } from '../utils/supabase-browser';
 
 export interface CollectionAnalysisProps {
   username?: string;
@@ -54,18 +55,20 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
   // Fetch auth info on mount and auto-populate username.
   const refreshAuthInfo = useCallback(async () => {
     try {
-      const res = await fetch('/api/auth/status');
-      if (!res.ok) return;
-      const data = await res.json();
+      // Use browser-side Supabase client for session — more reliable than server cookie reads.
+      const [statusData, { data: { session } }] = await Promise.all([
+        fetch('/api/auth/status').then(r => r.json()).catch(() => null),
+        createSupabaseBrowserClient().auth.getSession(),
+      ]);
       setAuthInfo({
-        discogsConnected: data.authenticated ?? false,
-        discogsUsername: data.username ?? null,
-        supabaseUserId: data.supabaseUserId ?? null,
-        supabaseLinkedUsername: data.supabaseLinkedUsername ?? null,
+        discogsConnected: statusData?.authenticated ?? false,
+        discogsUsername: statusData?.username ?? null,
+        supabaseUserId: session?.user?.id ?? null,
+        supabaseLinkedUsername: statusData?.supabaseLinkedUsername ?? null,
       });
       // Auto-populate username if connected and field is empty.
-      if (data.username && !username) {
-        setUsername(data.username);
+      if (statusData?.username && !username) {
+        setUsername(statusData.username);
       }
     } catch {
       // Non-fatal — user can still enter username manually.
@@ -151,9 +154,17 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
     };
 
     try {
+      // Pass the Supabase access token in the Authorization header so the server
+      // can verify the session even when cookie-based auth isn't available.
+      const { data: { session } } = await createSupabaseBrowserClient().auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
       const res = await fetch('/api/leaderboard', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(payload),
       });
 
@@ -259,8 +270,8 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
   const renderLeaderboardPanel = () => {
     if (!completed || !stats) return null;
 
-    const { discogsConnected, supabaseUserId, supabaseLinkedUsername } = authInfo;
-    const canSubmit = supabaseUserId && (supabaseLinkedUsername || discogsConnected);
+    const { discogsConnected, supabaseUserId } = authInfo;
+    const canSubmit = supabaseUserId && discogsConnected;
 
     if (submitState === 'success') {
       return (

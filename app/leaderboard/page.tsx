@@ -1,4 +1,5 @@
 import React from 'react';
+import Header from '../components/Header';
 import LeaderboardTabs from './LeaderboardTabs';
 
 // ISR: revalidate every 60 seconds so the leaderboard stays fresh without blocking page load.
@@ -28,7 +29,9 @@ export default async function LeaderboardPage() {
   ]);
 
   return (
-    <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <main>
+    <Header />
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="mb-8">
         <h1 className="text-3xl font-picnic text-minimal-black mb-2">Leaderboard</h1>
         <p className="text-minimal-gray-600 text-sm">
@@ -41,6 +44,7 @@ export default async function LeaderboardPage() {
         rarestItemEntries={rarestItemEntries}
         collectionEntries={collectionEntries}
       />
+    </div>
     </main>
   );
 }
