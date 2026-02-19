@@ -1,13 +1,19 @@
 import { createBrowserClient } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
- * Browser-side Supabase client using the public anon key.
- * Safe to use in Client Components — never leaks service-role credentials.
- * A singleton is created once per browser tab (module-level cache).
+ * Browser-side Supabase client — module-level singleton.
+ * All calls to createSupabaseBrowserClient() return the SAME instance,
+ * which ensures onAuthStateChange listeners and session storage are shared
+ * across every component that imports this function.
  */
-export function createSupabaseBrowserClient() {
-  return createBrowserClient(
+let _client: SupabaseClient | null = null;
+
+export function createSupabaseBrowserClient(): SupabaseClient {
+  if (_client) return _client;
+  _client = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+  return _client;
 }

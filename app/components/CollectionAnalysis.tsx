@@ -68,10 +68,17 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
       .catch(() => {});
   }, []);
 
-  // Subscribe to Supabase auth state changes — fires immediately with current session
-  // and on any sign-in / sign-out, regardless of which component triggered it.
+  // Subscribe to Supabase auth state — explicit getSession() handles the cold-load
+  // case where onAuthStateChange fires before cookie storage is hydrated.
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
+
+    // Eagerly read current session.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthInfo(prev => ({ ...prev, supabaseUserId: session?.user?.id ?? null }));
+    });
+
+    // Also subscribe so sign-in/out from any component (e.g. Header) is picked up.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setAuthInfo(prev => ({ ...prev, supabaseUserId: session?.user?.id ?? null }));
     });
