@@ -35,7 +35,7 @@ const nextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https://img.discogs.com https://i.discogs.com https://st.discogs.com",
-              "connect-src 'self' https://api.discogs.com https://www.discogs.com",
+              "connect-src 'self' https://api.discogs.com https://www.discogs.com https://*.supabase.co",
               "font-src 'self'",
               "frame-ancestors 'none'",
             ].join('; '),
