@@ -52,31 +52,43 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
     error: communityDataError
   } = useReleaseDetails(collection);
 
-  // Fetch auth info on mount and auto-populate username.
+  // Fetch Discogs auth status and auto-populate username.
+  useEffect(() => {
+    fetch('/api/auth/status')
+      .then(r => r.json())
+      .then(data => {
+        setAuthInfo(prev => ({
+          ...prev,
+          discogsConnected: data?.authenticated ?? false,
+          discogsUsername: data?.username ?? null,
+          supabaseLinkedUsername: data?.supabaseLinkedUsername ?? null,
+        }));
+        if (data?.username) setUsername((u) => u || data.username);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Subscribe to Supabase auth state changes — fires immediately with current session
+  // and on any sign-in / sign-out, regardless of which component triggered it.
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthInfo(prev => ({ ...prev, supabaseUserId: session?.user?.id ?? null }));
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   const refreshAuthInfo = useCallback(async () => {
     try {
-      // Use browser-side Supabase client for session — more reliable than server cookie reads.
-      const [statusData, { data: { session } }] = await Promise.all([
-        fetch('/api/auth/status').then(r => r.json()).catch(() => null),
-        createSupabaseBrowserClient().auth.getSession(),
-      ]);
-      setAuthInfo({
-        discogsConnected: statusData?.authenticated ?? false,
-        discogsUsername: statusData?.username ?? null,
-        supabaseUserId: session?.user?.id ?? null,
-        supabaseLinkedUsername: statusData?.supabaseLinkedUsername ?? null,
-      });
-      // Auto-populate username if connected and field is empty.
-      if (statusData?.username && !username) {
-        setUsername(statusData.username);
-      }
-    } catch {
-      // Non-fatal — user can still enter username manually.
-    }
-  }, [username]);
-
-  useEffect(() => {
-    refreshAuthInfo();
+      const data = await fetch('/api/auth/status').then(r => r.json());
+      setAuthInfo(prev => ({
+        ...prev,
+        discogsConnected: data?.authenticated ?? false,
+        discogsUsername: data?.username ?? null,
+        supabaseLinkedUsername: data?.supabaseLinkedUsername ?? null,
+      }));
+      if (data?.username) setUsername((u) => u || data.username);
+    } catch { /* non-fatal */ }
   }, []);
 
   // Update stats when enriched data becomes available.
