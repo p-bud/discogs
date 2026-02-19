@@ -11,9 +11,6 @@ const UsernameSchema = z
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic';
 
-// Maximum items to fetch
-const MAX_ITEMS = 50;
-
 /**
  * API route to get a user's Discogs collection
  * Gets a user's Discogs collection with basic info (no community data)
@@ -31,17 +28,17 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         { status: 400 }
       );
     }
-    
+
     console.time('collection-fetch'); // Add timing for debugging
-    
+
     // Get the collection (basic info only, fast)
     try {
-      const collection = await getUserCollection(parsed.data);
-      
+      const { items: collection, hitPageCap } = await getUserCollection(parsed.data);
+
       console.timeEnd('collection-fetch'); // Log how long it took
-      
+
       // Return the response (just the basic collection data, no stats yet)
-      return NextResponse.json({ 
+      return NextResponse.json({
         releases: collection,
         // Empty placeholder stats that will be calculated client-side
         stats: {
@@ -53,7 +50,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           mostWanted: [],
           mostCollectible: []
         },
-        limitedResults: collection.length >= MAX_ITEMS
+        limitedResults: hitPageCap
       });
       
     } catch (error: any) {

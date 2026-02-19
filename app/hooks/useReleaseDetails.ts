@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { CollectionItem } from '../models/types';
 
 // Hook to fetch community data for a batch of releases
-export function useReleaseDetails(releases: CollectionItem[], batchSize = 5) {
+export function useReleaseDetails(releases: CollectionItem[], batchSize = 10) {
   const [enrichedReleases, setEnrichedReleases] = useState<CollectionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [completed, setCompleted] = useState(false);
@@ -42,7 +42,7 @@ export function useReleaseDetails(releases: CollectionItem[], batchSize = 5) {
                 if (!response.ok) {
                   // If we hit a rate limit, add a longer delay
                   if (response.status === 429) {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await new Promise(resolve => setTimeout(resolve, 3000));
                     throw new Error(`Rate limit hit, slowing down requests`);
                   }
                   throw new Error(`Failed to fetch details for ${release.title}`);
@@ -80,7 +80,7 @@ export function useReleaseDetails(releases: CollectionItem[], batchSize = 5) {
           setEnrichedReleases([...updatedReleases]);
           
           // Add a small delay to avoid rate limits
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 250));
         }
         
         setCompleted(true);

@@ -25,13 +25,13 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
   const [detailsLoading, setDetailsLoading] = useState(false);
   
   // Use our custom hook to fetch community data for each release
-  const { 
-    enrichedReleases, 
-    loading: communityDataLoading, 
-    progress, 
+  const {
+    enrichedReleases,
+    loading: communityDataLoading,
+    progress,
     completed,
-    error: communityDataError 
-  } = useReleaseDetails(collection, 5);
+    error: communityDataError
+  } = useReleaseDetails(collection);
   
   // Update the stats when enriched data becomes available
   useEffect(() => {
@@ -334,17 +334,17 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
           <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100">
             <h3 className="text-lg font-semibold mb-2 text-blue-800">How This Works</h3>
             <p className="mb-2 text-sm text-blue-700">
-              We analyze up to 50 of your recently added records. Rarity scores are calculated as the ratio of "wants" to "haves" in the Discogs community.
+              We analyze your full collection. Rarity scores are calculated as the ratio of "wants" to "haves" in the Discogs community.
             </p>
             <p className="text-sm text-blue-700">
-              The system is limited to 50 records due to Discogs API limitations.
+              Your collection list loads immediately; rarity data fills in progressively.
             </p>
           </div>
 
           {limitedResults && (
             <div className="bg-yellow-50 p-4 rounded-lg mb-6 border border-yellow-100">
               <p className="text-sm text-yellow-700">
-                Please wait while we analyze your collection.
+                Your collection has over 2,000 records. Showing the most recent 2,000.
               </p>
             </div>
           )}
@@ -354,7 +354,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
               <div className="flex items-center">
                 <div className="mr-3 inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-indigo-600"></div>
                 <p className="text-sm text-indigo-700">
-                  Loading community data: {Math.round(progress)}% complete
+                  Loading rarity data for {Math.round(progress / 100 * collection.length)} of {collection.length} records…
                 </p>
               </div>
               <div className="w-full bg-indigo-200 rounded-full h-2.5 mt-2">
