@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../components/Header';
 import { createSupabaseBrowserClient } from '../utils/supabase-browser';
+import { handleDiscogsAuth } from '../utils/discogs-client';
 
 interface AccountData {
   email: string;
@@ -302,7 +303,7 @@ export default function AccountPage() {
               ) : (
                 <p className="text-sm text-minimal-gray-500">
                   Not connected.{' '}
-                  <a href="/api/auth" className="underline">Connect Discogs</a>
+                  <button onClick={handleDiscogsAuth} className="underline">Connect Discogs</button>
                 </p>
               )}
             </div>
