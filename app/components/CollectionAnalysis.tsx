@@ -62,7 +62,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
     error: communityDataError
   } = useReleaseDetails(collection);
 
-  // Fetch Discogs auth status and auto-populate username.
+  // Fetch Discogs auth status, auto-populate username, and auto-fetch collection.
   useEffect(() => {
     fetch('/api/auth/status')
       .then(r => r.json())
@@ -73,7 +73,12 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
           discogsUsername: data?.username ?? null,
           supabaseLinkedUsername: data?.supabaseLinkedUsername ?? null,
         }));
-        if (data?.username) setUsername((u) => u || data.username);
+        if (data?.authenticated && data?.username) {
+          setUsername((u) => u || data.username);
+          // Auto-fetch on mount so returning users don't have to click Analyze again.
+          // When the Supabase cache is warm this resolves in <200ms.
+          fetchCollection(data.username);
+        }
       })
       .catch(() => {});
   }, []);

@@ -172,35 +172,32 @@ export async function getUserCollection(
       timestamp: Date.now(),
     };
 
-    // ── 5. Persist to Supabase (fire-and-forget) ────────────────────────────
+    // ── 5. Persist to Supabase (awaited — fire-and-forget is cut short by Vercel serverless) ──
     if (supabase && basicItems.length > 0) {
       const BATCH_SIZE = 500;
       const syncedAt = new Date().toISOString();
+      try {
+        for (let i = 0; i < basicItems.length; i += BATCH_SIZE) {
+          const batch = basicItems.slice(i, i + BATCH_SIZE).map(item => ({
+            discogs_username: username,
+            release_id: item.id,
+            title: item.title,
+            artist: item.artist,
+            year: item.year,
+            formats: item.format,
+            cover_image: item.coverImage,
+            synced_at: syncedAt,
+          }));
 
-      void (async () => {
-        try {
-          for (let i = 0; i < basicItems.length; i += BATCH_SIZE) {
-            const batch = basicItems.slice(i, i + BATCH_SIZE).map(item => ({
-              discogs_username: username,
-              release_id: item.id,
-              title: item.title,
-              artist: item.artist,
-              year: item.year,
-              formats: item.format,
-              cover_image: item.coverImage,
-              synced_at: syncedAt,
-            }));
+          const { error } = await supabase
+            .from('user_collection_cache')
+            .upsert(batch, { onConflict: 'discogs_username,release_id' });
 
-            const { error } = await supabase
-              .from('user_collection_cache')
-              .upsert(batch, { onConflict: 'discogs_username,release_id' });
-
-            if (error) console.warn('Supabase collection upsert error:', error);
-          }
-        } catch (err) {
-          console.warn('Supabase collection cache write failed:', err);
+          if (error) console.warn('Supabase collection upsert error:', error);
         }
-      })();
+      } catch (err) {
+        console.warn('Supabase collection cache write failed:', err);
+      }
     }
 
     console.log(`Processed ${basicItems.length} releases with basic data${hitPageCap ? ' (page cap reached)' : ''}`);
@@ -282,33 +279,30 @@ export async function getReleaseCommunityData(releaseId: string): Promise<any> {
       timestamp: Date.now(),
     };
 
-    // ── 4. Persist to Supabase release cache (fire-and-forget) ─────────────
+    // ── 4. Persist to Supabase release cache (awaited — fire-and-forget is cut short by Vercel serverless) ──
     if (supabase) {
       const community = response.data?.community;
       if (community) {
         const haveCount = community.have ?? 0;
         const wantCount = community.want ?? 0;
         const rarityScore = haveCount > 0 ? wantCount / haveCount : 0;
-
-        void (async () => {
-          try {
-            const { error } = await supabase
-              .from('release_community_cache')
-              .upsert(
-                {
-                  release_id: releaseId,
-                  have_count: haveCount,
-                  want_count: wantCount,
-                  rarity_score: rarityScore,
-                  fetched_at: new Date().toISOString(),
-                },
-                { onConflict: 'release_id' },
-              );
-            if (error) console.warn(`Supabase release cache write failed for ${releaseId}:`, error);
-          } catch (err) {
-            console.warn(`Supabase release cache write failed for ${releaseId}:`, err);
-          }
-        })();
+        try {
+          const { error } = await supabase
+            .from('release_community_cache')
+            .upsert(
+              {
+                release_id: releaseId,
+                have_count: haveCount,
+                want_count: wantCount,
+                rarity_score: rarityScore,
+                fetched_at: new Date().toISOString(),
+              },
+              { onConflict: 'release_id' },
+            );
+          if (error) console.warn(`Supabase release cache write failed for ${releaseId}:`, error);
+        } catch (err) {
+          console.warn(`Supabase release cache write failed for ${releaseId}:`, err);
+        }
       }
     }
 
