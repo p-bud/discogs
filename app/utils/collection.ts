@@ -183,9 +183,20 @@ export async function getUserCollection(
       const syncedAt = new Date().toISOString();
       let batchesWritten = 0;
       let writeError: unknown = null;
+
+      // Deduplicate by release_id: a user can own multiple copies of the same
+      // release (same release.id, different instance_id). PostgreSQL raises
+      // error 21000 if the same conflict target appears twice in one upsert.
+      const seenIds = new Set<string>();
+      const uniqueItems = basicItems.filter(item => {
+        if (seenIds.has(item.id)) return false;
+        seenIds.add(item.id);
+        return true;
+      });
+
       try {
-        for (let i = 0; i < basicItems.length; i += BATCH_SIZE) {
-          const batch = basicItems.slice(i, i + BATCH_SIZE).map(item => ({
+        for (let i = 0; i < uniqueItems.length; i += BATCH_SIZE) {
+          const batch = uniqueItems.slice(i, i + BATCH_SIZE).map(item => ({
             discogs_username: username,
             release_id: item.id,
             title: item.title,
@@ -211,7 +222,7 @@ export async function getUserCollection(
         writeError = String(err);
         console.error('[cache-write] exception during upsert:', err);
       }
-      _cacheDebug = { ..._cacheDebug, batchesWritten, writeError };
+      _cacheDebug = { ..._cacheDebug, itemCount: uniqueItems.length, batchesWritten, writeError };
       console.log('[cache-write] result:', JSON.stringify(_cacheDebug));
     }
 
