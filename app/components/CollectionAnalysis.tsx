@@ -62,7 +62,11 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
     error: communityDataError
   } = useReleaseDetails(collection);
 
-  // Fetch Discogs auth status, auto-populate username, and auto-fetch collection.
+  // Fetch Discogs auth status and populate auth info.
+  // Only auto-fetch the collection here when no propUsername was provided by
+  // the parent page (i.e. the component is used standalone). When the page
+  // already resolved the username and passed it as a prop, the propUsername
+  // useEffect below handles the fetch to avoid double-fetching.
   useEffect(() => {
     fetch('/api/auth/status')
       .then(r => r.json())
@@ -73,10 +77,8 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
           discogsUsername: data?.username ?? null,
           supabaseLinkedUsername: data?.supabaseLinkedUsername ?? null,
         }));
-        if (data?.authenticated && data?.username) {
+        if (!propUsername && data?.authenticated && data?.username) {
           setUsername((u) => u || data.username);
-          // Auto-fetch on mount so returning users don't have to click Analyze again.
-          // When the Supabase cache is warm this resolves in <200ms.
           fetchCollection(data.username);
         }
       })
