@@ -88,26 +88,46 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
 
     try {
       const baseUrl = `/api/collection?username=${encodeURIComponent(username)}`;
+      let releases: CollectionItem[] = [];
 
-      // When force-refreshing, do a first pass to repopulate the cache from
-      // Discogs, then a second pass to read back from the cache — the second
-      // pass LEFT JOINs release_community_cache so rarity scores are present.
       if (forceRefresh) {
+        // Step 1: repopulate cache from Discogs — this returns fresh items with
+        // dateAdded/genres/styles but rarityScore=0.
         const refreshRes = await fetch(`${baseUrl}&forceRefresh=true`);
         if (!refreshRes.ok) {
           const d = await refreshRes.json();
           throw new Error(d.error || `Error ${refreshRes.status}`);
         }
+        const refreshData = await refreshRes.json();
+        releases = refreshData.releases ?? [];
+
+        // Step 2: try reading back from cache, which LEFT JOINs
+        // release_community_cache so rarity scores are present.
+        // Only adopt the cache result if it returns items — if anything goes
+        // wrong (0 rows, network error, etc.) we keep the fresh Discogs data
+        // so the user never sees "0 records".
+        try {
+          const cacheRes = await fetch(baseUrl);
+          if (cacheRes.ok) {
+            const cacheData = await cacheRes.json();
+            if ((cacheData.releases?.length ?? 0) > 0) {
+              releases = cacheData.releases;
+            }
+          }
+        } catch {
+          // Non-fatal — stick with the fresh Discogs data above.
+        }
+      } else {
+        const res = await fetch(baseUrl);
+        if (!res.ok) {
+          const d = await res.json();
+          throw new Error(d.error || `Error ${res.status}`);
+        }
+        const data = await res.json();
+        releases = data.releases ?? [];
+        setFromCache(data.fromCache ?? false);
       }
 
-      const res = await fetch(baseUrl);
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || `Error ${res.status}`);
-      }
-      const data = await res.json();
-      const releases: CollectionItem[] = data.releases ?? [];
-      setFromCache(data.fromCache ?? false);
       setWrappedStats(computeWrappedStats(releases, TARGET_YEAR));
     } catch (err: any) {
       setError(err.message || 'Failed to load collection');
