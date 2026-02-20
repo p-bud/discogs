@@ -39,7 +39,6 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
   const [limitedResults, setLimitedResults] = useState(false);
-  const [detailsLoading, setDetailsLoading] = useState(false);
   const [fromCache, setFromCache] = useState(false);
   const [cachedAt, setCachedAt] = useState<string | null>(null);
 
@@ -68,7 +67,8 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
   // already resolved the username and passed it as a prop, the propUsername
   // useEffect below handles the fetch to avoid double-fetching.
   useEffect(() => {
-    fetch('/api/auth/status')
+    const controller = new AbortController();
+    fetch('/api/auth/status', { signal: controller.signal })
       .then(r => r.json())
       .then(data => {
         setAuthInfo(prev => ({
@@ -82,7 +82,8 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
           fetchCollection(data.username);
         }
       })
-      .catch(() => {});
+      .catch(err => { if (err.name !== 'AbortError') { /* non-fatal */ } });
+    return () => controller.abort();
   }, []);
 
   // Subscribe to Supabase auth state — explicit getSession() handles the cold-load
@@ -151,7 +152,6 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
     setFromCache(false);
     setCachedAt(null);
     setLoadingMessage(forceRefresh ? 'Refreshing your collection from Discogs...' : 'Fetching your collection from Discogs...');
-    setDetailsLoading(false);
     setSubmitState('idle');
     setSubmitError(null);
 
@@ -170,7 +170,6 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
       setFromCache(data.fromCache ?? false);
       setCachedAt(data.cachedAt ?? null);
       setLoadingMessage(null);
-      setDetailsLoading(true);
 
       // When serving from cache the releases already carry community data
       // (haveCount/wantCount/rarityScore from the Supabase RPC join).

@@ -4,13 +4,6 @@ import { CollectionItem, CollectionStats } from '../models/types';
 import { getSupabaseClient } from './supabase';
 // Don't import at the top level since we're using dynamic imports
 
-// Simple in-memory cache for collection data (short-lived, single-process)
-const collectionsCache: Record<string, { data: CollectionItem[], hitPageCap: boolean, timestamp: number }> = {};
-const releaseCache: Record<string, { data: any, timestamp: number }> = {};
-
-// In-memory cache expiration (1 hour)
-const CACHE_EXPIRATION = 60 * 60 * 1000;
-
 // Supabase cache TTL (7 days in ms, used for staleness check)
 const SUPABASE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -95,16 +88,7 @@ export async function getUserCollection(
       }
     }
 
-    // ── 3. In-memory cache (short-circuit within the same server process) ───
-    const now = Date.now();
-    if (!forceRefresh && collectionsCache[username] &&
-        now - collectionsCache[username].timestamp < CACHE_EXPIRATION) {
-      console.log(`Using in-memory cached collection for ${username}`);
-      const cached = collectionsCache[username];
-      return { items: cached.data, hitPageCap: cached.hitPageCap, fromCache: false, cachedAt: null };
-    }
-
-    // ── 4. Fetch from Discogs ───────────────────────────────────────────────
+    // ── 3. Fetch from Discogs ───────────────────────────────────────────────
     const cookieStore = cookies();
     const hasAuth = cookieStore.has('discogs_oauth_token') && cookieStore.has('discogs_oauth_token_secret');
 
@@ -165,14 +149,7 @@ export async function getUserCollection(
       rarityScore: 0,
     }));
 
-    // Update in-memory cache
-    collectionsCache[username] = {
-      data: basicItems,
-      hitPageCap,
-      timestamp: Date.now(),
-    };
-
-    // ── 5. Persist to Supabase (awaited — Vercel serverless cuts off async work after response) ──
+    // ── 4. Persist to Supabase (awaited — Vercel serverless cuts off async work after response) ──
     if (supabase && basicItems.length > 0) {
       const BATCH_SIZE = 500;
       const syncedAt = new Date().toISOString();
@@ -260,14 +237,7 @@ export async function getReleaseCommunityData(releaseId: string): Promise<any> {
       }
     }
 
-    // ── 2. In-memory cache ──────────────────────────────────────────────────
-    const now = Date.now();
-    if (releaseCache[releaseId] &&
-        now - releaseCache[releaseId].timestamp < CACHE_EXPIRATION) {
-      return releaseCache[releaseId].data;
-    }
-
-    // ── 3. Fetch from Discogs ───────────────────────────────────────────────
+    // ── 2. Fetch from Discogs ───────────────────────────────────────────────
     const cookieStore = cookies();
     const hasAuth = cookieStore.has('discogs_oauth_token') && cookieStore.has('discogs_oauth_token_secret');
 
@@ -287,13 +257,7 @@ export async function getReleaseCommunityData(releaseId: string): Promise<any> {
 
     const response = await rateLimit(getReleaseDetails);
 
-    // Update in-memory cache
-    releaseCache[releaseId] = {
-      data: response.data,
-      timestamp: Date.now(),
-    };
-
-    // ── 4. Persist to Supabase release cache (awaited — fire-and-forget is cut short by Vercel serverless) ──
+    // ── 3. Persist to Supabase release cache (awaited — fire-and-forget is cut short by Vercel serverless) ──
     if (supabase) {
       const community = response.data?.community;
       if (community) {

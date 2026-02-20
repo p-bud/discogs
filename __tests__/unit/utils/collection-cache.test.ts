@@ -7,8 +7,7 @@
  * • Mock next/headers to simulate OAuth cookies being present.
  * • Mock rate-limiter to just call the fn directly.
  * • Mock @/app/utils/discogs for the dynamic import used inside getUserCollection.
- * • Use distinct usernames per test to avoid the module-level in-memory cache
- *   polluting results across tests.
+ * • Use distinct usernames per test to keep test assertions independent.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
