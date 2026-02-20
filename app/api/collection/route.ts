@@ -19,6 +19,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(req.url);
     const username = searchParams.get('username');
+    const forceRefresh = searchParams.get('forceRefresh') === 'true';
 
     // Auth is enforced by middleware.ts — no duplicate check needed here.
     const parsed = UsernameSchema.safeParse(username);
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     // Get the collection (basic info only, fast)
     try {
-      const { items: collection, hitPageCap } = await getUserCollection(parsed.data);
+      const { items: collection, hitPageCap, fromCache, cachedAt } = await getUserCollection(parsed.data, forceRefresh);
 
       console.timeEnd('collection-fetch'); // Log how long it took
 
@@ -50,7 +51,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           mostWanted: [],
           mostCollectible: []
         },
-        limitedResults: hitPageCap
+        limitedResults: hitPageCap,
+        fromCache,
+        cachedAt,
       });
       
     } catch (error: any) {

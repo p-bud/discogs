@@ -8,6 +8,14 @@ import { calculateCollectionStats } from '../utils/client-collection';
 import AuthModal from './AuthModal';
 import { createSupabaseBrowserClient } from '../utils/supabase-browser';
 
+function formatRelativeTime(isoString: string): string {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return '1 day ago';
+  return `${diffDays} days ago`;
+}
+
 export interface CollectionAnalysisProps {
   username?: string;
   onUsernameChange?: (username: string) => void;
@@ -32,6 +40,8 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
   const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
   const [limitedResults, setLimitedResults] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [fromCache, setFromCache] = useState(false);
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
 
   // Auth state for leaderboard submission
   const [authInfo, setAuthInfo] = useState<AuthInfo>({
@@ -121,7 +131,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
     }
   }, [propUsername]);
 
-  const fetchCollection = async (usernameToFetch = username) => {
+  const fetchCollection = async (usernameToFetch = username, forceRefresh = false) => {
     if (!usernameToFetch) {
       setError('Please enter a Discogs username');
       return;
@@ -131,13 +141,16 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
     setError(null);
     setCollection([]);
     setStats(null);
-    setLoadingMessage('Fetching your collection from Discogs...');
+    setFromCache(false);
+    setCachedAt(null);
+    setLoadingMessage(forceRefresh ? 'Refreshing your collection from Discogs...' : 'Fetching your collection from Discogs...');
     setDetailsLoading(false);
     setSubmitState('idle');
     setSubmitError(null);
 
     try {
-      const response = await fetch(`/api/collection?username=${encodeURIComponent(usernameToFetch)}`);
+      const url = `/api/collection?username=${encodeURIComponent(usernameToFetch)}${forceRefresh ? '&forceRefresh=true' : ''}`;
+      const response = await fetch(url);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -148,6 +161,8 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
       setCollection(data.releases);
       setLimitedResults(data.limitedResults || false);
       setStats(data.stats);
+      setFromCache(data.fromCache ?? false);
+      setCachedAt(data.cachedAt ?? null);
       setLoadingMessage(null);
       setDetailsLoading(true);
     } catch (err: any) {
@@ -431,6 +446,23 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
           <p className="text-xs text-minimal-gray-500 mt-1.5">
             Signed in as <span className="font-medium">{authInfo.discogsUsername}</span>
           </p>
+        )}
+        {fromCache && cachedAt && (
+          <div className="flex items-center gap-2 mt-2">
+            <span className="inline-flex items-center gap-1.5 text-xs text-minimal-gray-500 bg-minimal-gray-100 border border-minimal-gray-200 rounded-full px-3 py-1">
+              <span>Cached</span>
+              <span>·</span>
+              <span>synced {formatRelativeTime(cachedAt)}</span>
+            </span>
+            <button
+              onClick={() => fetchCollection(username, true)}
+              disabled={loading || communityDataLoading}
+              className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Re-fetch collection from Discogs"
+            >
+              ↺ Refresh
+            </button>
+          </div>
         )}
       </div>
 
