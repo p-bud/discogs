@@ -29,7 +29,7 @@ const TIME_BUDGET_MS = 8_000; // Leave headroom before Vercel 10s timeout
 export async function getUserCollection(
   username: string,
   forceRefresh = false,
-): Promise<{ items: CollectionItem[]; hitPageCap: boolean; fromCache: boolean; cachedAt: string | null }> {
+): Promise<{ items: CollectionItem[]; hitPageCap: boolean; fromCache: boolean; cachedAt: string | null; _cacheDebug?: Record<string, unknown> }> {
   try {
     const supabase = getSupabaseClient();
 
@@ -173,9 +173,16 @@ export async function getUserCollection(
     };
 
     // ── 5. Persist to Supabase (awaited — fire-and-forget is cut short by Vercel serverless) ──
+    let _cacheDebug: Record<string, unknown> = {
+      supabaseAvailable: !!supabase,
+      itemCount: basicItems.length,
+    };
+
     if (supabase && basicItems.length > 0) {
       const BATCH_SIZE = 500;
       const syncedAt = new Date().toISOString();
+      let batchesWritten = 0;
+      let writeError: unknown = null;
       try {
         for (let i = 0; i < basicItems.length; i += BATCH_SIZE) {
           const batch = basicItems.slice(i, i + BATCH_SIZE).map(item => ({
@@ -193,15 +200,23 @@ export async function getUserCollection(
             .from('user_collection_cache')
             .upsert(batch, { onConflict: 'discogs_username,release_id' });
 
-          if (error) console.warn('Supabase collection upsert error:', error);
+          if (error) {
+            writeError = error;
+            console.error('[cache-write] upsert error:', JSON.stringify(error));
+            break;
+          }
+          batchesWritten++;
         }
       } catch (err) {
-        console.warn('Supabase collection cache write failed:', err);
+        writeError = String(err);
+        console.error('[cache-write] exception during upsert:', err);
       }
+      _cacheDebug = { ..._cacheDebug, batchesWritten, writeError };
+      console.log('[cache-write] result:', JSON.stringify(_cacheDebug));
     }
 
     console.log(`Processed ${basicItems.length} releases with basic data${hitPageCap ? ' (page cap reached)' : ''}`);
-    return { items: basicItems, hitPageCap, fromCache: false, cachedAt: null };
+    return { items: basicItems, hitPageCap, fromCache: false, cachedAt: null, _cacheDebug };
   } catch (error) {
     console.error('Error fetching collection:', error);
     throw error;
