@@ -368,6 +368,7 @@ export default function AccountPage() {
           </div>
 
           {toggleError && <p className="text-xs text-red-600">{toggleError}</p>}
+          <p className="text-xs text-minimal-gray-400">Changes may take up to a minute to appear on the leaderboard.</p>
 
           {account.display_name && (
             <div className="flex items-start justify-between gap-4 pt-2 border-t border-minimal-gray-100">
