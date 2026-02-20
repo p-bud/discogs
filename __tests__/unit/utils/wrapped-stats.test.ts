@@ -187,24 +187,6 @@ describe('computeWrappedStats', () => {
     expect(stats.year).toBe(2023);
   });
 
-  it('allTimeRarest = highest rarityScore > 0 across entire collection, including non-year items', () => {
-    const items = [
-      makeItem({ id: 'this-year',  dateAdded: '2025-06-15T12:00:00Z', rarityScore: 2.0 }),
-      makeItem({ id: 'other-year', dateAdded: '2023-06-15T12:00:00Z', rarityScore: 9.5 }),
-    ];
-    const stats = computeWrappedStats(items, TARGET);
-    expect(stats.allTimeRarest?.id).toBe('other-year');
-    expect(stats.allTimeRarest?.rarityScore).toBe(9.5);
-    // rarestAddition is only from target year
-    expect(stats.rarestAddition?.id).toBe('this-year');
-  });
-
-  it('allTimeRarest null when all rarityScores are 0', () => {
-    const items = [makeItem({ rarityScore: 0 }), makeItem({ rarityScore: 0 })];
-    const stats = computeWrappedStats(items, TARGET);
-    expect(stats.allTimeRarest).toBeNull();
-  });
-
   it('single item with all valid data → complete stats', () => {
     const item = makeItem({
       id: 'solo',

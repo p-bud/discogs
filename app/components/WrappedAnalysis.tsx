@@ -87,8 +87,20 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
     setWrappedStats(null);
 
     try {
-      const url = `/api/collection?username=${encodeURIComponent(username)}${forceRefresh ? '&forceRefresh=true' : ''}`;
-      const res = await fetch(url);
+      const baseUrl = `/api/collection?username=${encodeURIComponent(username)}`;
+
+      // When force-refreshing, do a first pass to repopulate the cache from
+      // Discogs, then a second pass to read back from the cache — the second
+      // pass LEFT JOINs release_community_cache so rarity scores are present.
+      if (forceRefresh) {
+        const refreshRes = await fetch(`${baseUrl}&forceRefresh=true`);
+        if (!refreshRes.ok) {
+          const d = await refreshRes.json();
+          throw new Error(d.error || `Error ${refreshRes.status}`);
+        }
+      }
+
+      const res = await fetch(baseUrl);
       if (!res.ok) {
         const d = await res.json();
         throw new Error(d.error || `Error ${res.status}`);
@@ -158,7 +170,7 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
   if (!wrappedStats) return null;
 
   const { totalAdded, hasPartialData, genreBreakdown, styleBreakdown, formatBreakdown,
-          decadeBreakdown, rarestAddition, mostCommonAddition, allTimeRarest,
+          decadeBreakdown, rarestAddition, mostCommonAddition,
           avgRarityThisYear, avgRarityAllTime } = wrappedStats;
 
   const maxGenre  = genreBreakdown[0]?.count  ?? 1;
@@ -207,37 +219,6 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
           record{totalAdded !== 1 ? 's' : ''} added in {TARGET_YEAR}
         </p>
       </div>
-
-      {/* All-time rarest record */}
-      {allTimeRarest && (
-        <section>
-          <h2 className="text-xl font-picnic text-minimal-black mb-4">Your Rarest Record</h2>
-          <div className="border border-minimal-gray-200 rounded-lg p-5 flex gap-5 items-center">
-            {allTimeRarest.coverImage && (
-              <div className="relative w-24 h-24 flex-shrink-0">
-                <Image
-                  src={allTimeRarest.coverImage}
-                  alt={allTimeRarest.title}
-                  fill
-                  className="object-cover rounded"
-                  sizes="96px"
-                />
-              </div>
-            )}
-            <div className="min-w-0">
-              <p className="font-semibold text-minimal-black leading-snug">{allTimeRarest.title}</p>
-              <p className="text-sm text-minimal-gray-500">{allTimeRarest.artist}</p>
-              {allTimeRarest.year && (
-                <p className="text-sm text-minimal-gray-500">{allTimeRarest.year}</p>
-              )}
-              <p className="mt-2 text-2xl font-picnic font-bold" style={{ color: ACCENT }}>
-                {allTimeRarest.rarityScore.toFixed(2)}
-              </p>
-              <p className="text-xs text-minimal-gray-500">rarity score</p>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Top Genres */}
       {genreBreakdown.length > 0 && (
@@ -291,15 +272,35 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
         </section>
       )}
 
-      {/* Rarity spotlights */}
-      {(rarestAddition || mostCommonAddition) && (
+      {/* Rarest record added this year */}
+      {rarestAddition && (
         <section>
-          <h2 className="text-xl font-picnic text-minimal-black mb-4">Rarity Spotlights</h2>
-          <div className="flex gap-4 flex-col sm:flex-row">
-            {rarestAddition && <RarityCard label="Rarest find" item={rarestAddition} />}
-            {mostCommonAddition && rarestAddition?.id !== mostCommonAddition.id && (
-              <RarityCard label="Most common" item={mostCommonAddition} />
+          <h2 className="text-xl font-picnic text-minimal-black mb-4">
+            Rarest Record You Added in {TARGET_YEAR}
+          </h2>
+          <div className="border border-minimal-gray-200 rounded-lg p-5 flex gap-5 items-center">
+            {rarestAddition.coverImage && (
+              <div className="relative w-24 h-24 flex-shrink-0">
+                <Image
+                  src={rarestAddition.coverImage}
+                  alt={rarestAddition.title}
+                  fill
+                  className="object-cover rounded"
+                  sizes="96px"
+                />
+              </div>
             )}
+            <div className="min-w-0">
+              <p className="font-semibold text-minimal-black leading-snug">{rarestAddition.title}</p>
+              <p className="text-sm text-minimal-gray-500">{rarestAddition.artist}</p>
+              {rarestAddition.year && (
+                <p className="text-sm text-minimal-gray-500">{rarestAddition.year}</p>
+              )}
+              <p className="mt-2 text-2xl font-picnic font-bold" style={{ color: ACCENT }}>
+                {rarestAddition.rarityScore.toFixed(2)}
+              </p>
+              <p className="text-xs text-minimal-gray-500">rarity score</p>
+            </div>
           </div>
         </section>
       )}

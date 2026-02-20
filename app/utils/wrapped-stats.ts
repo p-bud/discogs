@@ -73,11 +73,6 @@ export function computeWrappedStats(
   const rarestAddition     = sortedByRarity[0] ?? null;
   const mostCommonAddition = sortedByRarity[sortedByRarity.length - 1] ?? null;
 
-  // All-time rarest across the whole collection
-  const allTimeRarest = [...allItems]
-    .filter(item => item.rarityScore > 0)
-    .sort((a, b) => b.rarityScore - a.rarityScore)[0] ?? null;
-
   // ── Average rarity ───────────────────────────────────────────────────────
 
   function avg(items: CollectionItem[]): number {
@@ -99,7 +94,6 @@ export function computeWrappedStats(
     decadeBreakdown,
     rarestAddition,
     mostCommonAddition,
-    allTimeRarest,
     avgRarityThisYear,
     avgRarityAllTime,
   };
