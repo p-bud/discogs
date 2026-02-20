@@ -302,7 +302,7 @@ export default function AccountPage() {
               ) : (
                 <p className="text-sm text-minimal-gray-500">
                   Not connected.{' '}
-                  <a href="/api/auth/discogs" className="underline">Connect Discogs</a>
+                  <a href="/api/auth" className="underline">Connect Discogs</a>
                 </p>
               )}
             </div>
