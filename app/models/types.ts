@@ -74,6 +74,7 @@ export interface WrappedStats {
   decadeBreakdown: { decade: string; count: number }[];
   rarestAddition:      CollectionItem | null;  // highest rarityScore > 0 in target year
   mostCommonAddition:  CollectionItem | null;  // lowest  rarityScore > 0 in target year
+  allTimeRarest:       CollectionItem | null;  // highest rarityScore > 0 across entire collection
   avgRarityThisYear: number;
   avgRarityAllTime:  number;
 }

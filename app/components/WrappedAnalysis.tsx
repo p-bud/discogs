@@ -158,7 +158,8 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
   if (!wrappedStats) return null;
 
   const { totalAdded, hasPartialData, genreBreakdown, styleBreakdown, formatBreakdown,
-          decadeBreakdown, rarestAddition, mostCommonAddition, avgRarityThisYear, avgRarityAllTime } = wrappedStats;
+          decadeBreakdown, rarestAddition, mostCommonAddition, allTimeRarest,
+          avgRarityThisYear, avgRarityAllTime } = wrappedStats;
 
   const maxGenre  = genreBreakdown[0]?.count  ?? 1;
   const maxStyle  = styleBreakdown[0]?.count  ?? 1;
@@ -206,6 +207,37 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
           record{totalAdded !== 1 ? 's' : ''} added in {TARGET_YEAR}
         </p>
       </div>
+
+      {/* All-time rarest record */}
+      {allTimeRarest && (
+        <section>
+          <h2 className="text-xl font-picnic text-minimal-black mb-4">Your Rarest Record</h2>
+          <div className="border border-minimal-gray-200 rounded-lg p-5 flex gap-5 items-center">
+            {allTimeRarest.coverImage && (
+              <div className="relative w-24 h-24 flex-shrink-0">
+                <Image
+                  src={allTimeRarest.coverImage}
+                  alt={allTimeRarest.title}
+                  fill
+                  className="object-cover rounded"
+                  sizes="96px"
+                />
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="font-semibold text-minimal-black leading-snug">{allTimeRarest.title}</p>
+              <p className="text-sm text-minimal-gray-500">{allTimeRarest.artist}</p>
+              {allTimeRarest.year && (
+                <p className="text-sm text-minimal-gray-500">{allTimeRarest.year}</p>
+              )}
+              <p className="mt-2 text-2xl font-picnic font-bold" style={{ color: ACCENT }}>
+                {allTimeRarest.rarityScore.toFixed(2)}
+              </p>
+              <p className="text-xs text-minimal-gray-500">rarity score</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Top Genres */}
       {genreBreakdown.length > 0 && (
