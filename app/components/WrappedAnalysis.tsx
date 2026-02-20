@@ -68,6 +68,17 @@ function RarityCard({ label, item }: { label: string; item: CollectionItem }) {
   );
 }
 
+// ── Per-session page cache ───────────────────────────────────────────────────
+// Keyed by username. Persists across page navigations (module scope).
+// Cleared on forceRefresh so "Refresh Collection" always re-fetches.
+
+interface WrappedPageCache {
+  releases: CollectionItem[];
+  stats: WrappedStats;
+  fromCache: boolean;
+}
+const wrappedPageCache = new Map<string, WrappedPageCache>();
+
 // ── Main component ──────────────────────────────────────────────────────────
 
 interface WrappedAnalysisProps {
@@ -92,10 +103,15 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
     completed: enrichmentDone,
   } = useReleaseDetails(collection);
 
-  // Re-compute stats once enrichment finishes (picks up rarity scores).
+  // Re-compute stats once enrichment finishes (picks up rarity scores)
+  // and write the final result to the page cache.
   useEffect(() => {
     if (enrichmentDone && enrichedReleases.length > 0) {
-      setWrappedStats(computeWrappedStats(enrichedReleases, TARGET_YEAR));
+      const stats = computeWrappedStats(enrichedReleases, TARGET_YEAR);
+      setWrappedStats(stats);
+      if (username) {
+        wrappedPageCache.set(username, { releases: enrichedReleases, stats, fromCache });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enrichmentDone]);
@@ -143,10 +159,18 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
   };
 
   useEffect(() => {
-    if (username) fetchAndCompute();
+    if (!username) return;
+    const cached = wrappedPageCache.get(username);
+    if (cached) {
+      setWrappedStats(cached.stats);
+      setFromCache(cached.fromCache);
+      return;
+    }
+    fetchAndCompute();
   }, [username]);
 
   const handleRefresh = () => {
+    if (username) wrappedPageCache.delete(username);
     setRefreshing(true);
     fetchAndCompute(true);
   };
