@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import Header from '../components/Header';
 import LeaderboardTabs from './LeaderboardTabs';
 
@@ -36,6 +37,12 @@ export default async function LeaderboardPage() {
         <h1 className="text-3xl font-picnic text-minimal-black mb-2">Leaderboard</h1>
         <p className="text-minimal-gray-600 text-sm">
           Analyze your collection and submit to appear here. Rankings update every minute.
+        </p>
+        <p className="text-minimal-gray-500 text-xs mt-2">
+          Only users who have opted in appear here. Display names are shown when set; otherwise Discogs usernames are shown.{' '}
+          <Link href="/account" className="underline hover:text-minimal-gray-700">
+            Manage your settings →
+          </Link>
         </p>
       </div>
 

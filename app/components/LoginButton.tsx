@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { handleDiscogsAuth, handleLogout } from '../utils/discogs-client';
 import { createSupabaseBrowserClient } from '../utils/supabase-browser';
 import AuthModal from './AuthModal';
@@ -137,6 +138,13 @@ const LoginButton: React.FC<LoginButtonProps> = ({ className = '' }) => {
               <p className="font-medium text-minimal-gray-800 truncate">{supabaseEmail}</p>
               <p className="text-minimal-gray-500 text-xs truncate">Discogs: {discogsUsername}</p>
             </div>
+            <Link
+              href="/account"
+              onClick={() => setShowMenu(false)}
+              className="block w-full px-4 py-2 hover:bg-minimal-gray-50 text-minimal-gray-700"
+            >
+              Account settings
+            </Link>
             <button
               onClick={initiateDiscogsLogout}
               disabled={loading}

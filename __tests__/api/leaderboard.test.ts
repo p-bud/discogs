@@ -17,7 +17,9 @@ const mockAdminFrom = vi.fn((table: string) => {
   if (table === 'leaderboard_entries') {
     return {
       select: vi.fn(() => ({
-        order: vi.fn(() => ({ limit: mockSelectLeaderboard })),
+        eq: vi.fn(() => ({
+          order: vi.fn(() => ({ limit: mockSelectLeaderboard })),
+        })),
       })),
       upsert: mockUpsertLeaderboard,
     };
@@ -141,7 +143,10 @@ describe('POST /api/leaderboard', () => {
   beforeEach(() => {
     vi.mocked(getSupabaseClient).mockReturnValue(mockAdminClient as any);
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-uuid-123' } } });
-    mockSelectProfile.mockResolvedValue({ data: { discogs_username: 'testuser' }, error: null });
+    mockSelectProfile.mockResolvedValue({
+      data: { discogs_username: 'testuser', display_name: null, leaderboard_opt_in: true, show_discogs_link: true },
+      error: null,
+    });
     mockUpsertLeaderboard.mockResolvedValue({ error: null });
   });
 
@@ -180,7 +185,20 @@ describe('POST /api/leaderboard', () => {
     expect(res.status).toBe(403);
   });
 
-  it('valid session + Discogs cookies → auto-links username and succeeds', async () => {
+  it('leaderboard_opt_in: false → 403', async () => {
+    mockSelectProfile.mockResolvedValue({
+      data: { discogs_username: 'testuser', display_name: null, leaderboard_opt_in: false, show_discogs_link: true },
+      error: null,
+    });
+    const req = makeRequest('POST', BASE_URL, VALID_BODY);
+    const res = await POST(req as any);
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toMatch(/account settings/);
+  });
+
+  it('no profile (no opt-in) + Discogs cookies → 403 (must opt in first)', async () => {
+    // Profile is null → opt-in check fails before reaching the auto-link logic.
     mockSelectProfile.mockResolvedValue({ data: null, error: null });
     vi.mocked(axios.get).mockResolvedValue({ data: { username: 'autolinked_user' } });
     const req = makeRequest('POST', BASE_URL, VALID_BODY, {
@@ -188,9 +206,7 @@ describe('POST /api/leaderboard', () => {
       discogs_oauth_token_secret: 'sec',
     });
     const res = await POST(req as any);
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
+    expect(res.status).toBe(403);
   });
 
   it('Supabase client unavailable → 503', async () => {

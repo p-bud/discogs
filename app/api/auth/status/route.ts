@@ -48,6 +48,8 @@ export async function GET(request: NextRequest) {
     // --- Supabase auth check ---
     let supabaseUserId: string | null = null;
     let supabaseLinkedUsername: string | null = null;
+    let displayName: string | null = null;
+    let leaderboardOptIn: boolean = false;
 
     try {
       const supabase = createSupabaseServerClient();
@@ -61,10 +63,12 @@ export async function GET(request: NextRequest) {
         if (adminClient) {
           const { data } = await adminClient
             .from('user_profiles')
-            .select('discogs_username')
+            .select('discogs_username, display_name, leaderboard_opt_in')
             .eq('id', user.id)
             .single();
           supabaseLinkedUsername = data?.discogs_username ?? null;
+          displayName = data?.display_name ?? null;
+          leaderboardOptIn = data?.leaderboard_opt_in ?? false;
         }
       }
     } catch (supabaseError) {
@@ -77,6 +81,8 @@ export async function GET(request: NextRequest) {
       username: discogsUsername,
       supabaseUserId,
       supabaseLinkedUsername,
+      display_name: displayName,
+      leaderboard_opt_in: leaderboardOptIn,
     });
   } catch (error) {
     console.error('Auth status check error:', error);

@@ -4,6 +4,8 @@ import React from 'react';
 
 export interface LeaderboardEntry {
   discogs_username: string;
+  display_name: string | null;
+  show_discogs_link: boolean;
   avg_rarity_score: number;
   rarest_item_score: number;
   rarest_item_title: string | null;
@@ -88,14 +90,29 @@ export default function LeaderboardTable({ entries, rank }: LeaderboardTableProp
                 {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
               </td>
               <td className="px-4 py-3">
-                <a
-                  href={`https://www.discogs.com/user/${encodeURIComponent(entry.discogs_username)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-minimal-accent hover:underline font-medium"
-                >
-                  {entry.discogs_username}
-                </a>
+                {entry.display_name ? (
+                  entry.show_discogs_link ? (
+                    <a
+                      href={`https://www.discogs.com/user/${encodeURIComponent(entry.discogs_username)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-minimal-accent hover:underline font-medium"
+                    >
+                      {entry.display_name}
+                    </a>
+                  ) : (
+                    <span className="font-medium text-minimal-gray-800">{entry.display_name}</span>
+                  )
+                ) : (
+                  <a
+                    href={`https://www.discogs.com/user/${encodeURIComponent(entry.discogs_username)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-minimal-accent hover:underline font-medium"
+                  >
+                    {entry.discogs_username}
+                  </a>
+                )}
               </td>
               <td className="px-4 py-3 text-minimal-gray-800">
                 {scoreCell(entry, rank)}

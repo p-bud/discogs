@@ -36,8 +36,9 @@ export async function GET(request: NextRequest) {
   const { data, error } = await adminClient
     .from('leaderboard_entries')
     .select(
-      'discogs_username, avg_rarity_score, rarest_item_score, rarest_item_title, rarest_item_artist, collection_size, analyzed_at'
+      'discogs_username, display_name, show_discogs_link, avg_rarity_score, rarest_item_score, rarest_item_title, rarest_item_artist, collection_size, analyzed_at'
     )
+    .eq('leaderboard_opt_in', true)
     .order(column, { ascending: false })
     .limit(50);
 
@@ -121,15 +122,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
   }
 
-  // Look up linked Discogs username from user_profiles.
+  // Look up linked Discogs username + leaderboard settings from user_profiles.
   let discogsUsername: string | null = null;
+  let displayName: string | null = null;
+  let showDiscogsLink: boolean = true;
   const { data: profile } = await adminClient
     .from('user_profiles')
-    .select('discogs_username')
+    .select('discogs_username, display_name, leaderboard_opt_in, show_discogs_link')
     .eq('id', user.id)
     .single();
 
   discogsUsername = profile?.discogs_username ?? null;
+  displayName = profile?.display_name ?? null;
+  showDiscogsLink = profile?.show_discogs_link ?? true;
+
+  // Require explicit opt-in before submitting to the public leaderboard.
+  // No profile row = user has never opted in. leaderboard_opt_in=false = user opted out.
+  if (!profile?.leaderboard_opt_in) {
+    return NextResponse.json(
+      { error: 'Enable leaderboard participation in account settings first.' },
+      { status: 403 }
+    );
+  }
 
   // If not linked yet, try to auto-link from Discogs cookies on this request.
   if (!discogsUsername) {
@@ -157,6 +171,9 @@ export async function POST(request: NextRequest) {
       {
         user_id: user.id,
         discogs_username: discogsUsername,
+        display_name: displayName,
+        leaderboard_opt_in: true,
+        show_discogs_link: showDiscogsLink,
         avg_rarity_score,
         rarest_item_score,
         rarest_item_title,

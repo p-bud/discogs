@@ -26,6 +26,7 @@ interface AuthInfo {
   discogsUsername: string | null;
   supabaseUserId: string | null;
   supabaseLinkedUsername: string | null;
+  leaderboardOptIn: boolean;
 }
 
 type SubmitState = 'idle' | 'submitting' | 'success' | 'error';
@@ -48,7 +49,9 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
     discogsUsername: null,
     supabaseUserId: null,
     supabaseLinkedUsername: null,
+    leaderboardOptIn: false,
   });
+  const [consentChecked, setConsentChecked] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -76,6 +79,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
           discogsConnected: data?.authenticated ?? false,
           discogsUsername: data?.username ?? null,
           supabaseLinkedUsername: data?.supabaseLinkedUsername ?? null,
+          leaderboardOptIn: data?.leaderboard_opt_in ?? false,
         }));
         if (!propUsername && data?.authenticated && data?.username) {
           setUsername((u) => u || data.username);
@@ -111,6 +115,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
         discogsConnected: data?.authenticated ?? false,
         discogsUsername: data?.username ?? null,
         supabaseLinkedUsername: data?.supabaseLinkedUsername ?? null,
+        leaderboardOptIn: data?.leaderboard_opt_in ?? false,
       }));
       if (data?.username) setUsername((u) => u || data.username);
     } catch { /* non-fatal */ }
@@ -189,27 +194,39 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
     }
   };
 
-  const handleSubmitToLeaderboard = async () => {
+  const handleSubmitToLeaderboard = async (withConsent = false) => {
     if (!stats || !enrichedReleases.length) return;
     setSubmitState('submitting');
     setSubmitError(null);
 
-    const payload = {
-      avg_rarity_score: stats.averageRarityScore,
-      rarest_item_score: stats.rarestItems[0]?.rarityScore ?? 0,
-      rarest_item_title: stats.rarestItems[0]?.title ?? '',
-      rarest_item_artist: stats.rarestItems[0]?.artist ?? '',
-      collection_size: collection.length,
-    };
-
     try {
-      // Pass the Supabase access token in the Authorization header so the server
-      // can verify the session even when cookie-based auth isn't available.
       const { data: { session } } = await createSupabaseBrowserClient().auth.getSession();
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (session?.access_token) {
         headers['Authorization'] = `Bearer ${session.access_token}`;
       }
+
+      // If the user just gave consent via the checkbox, set leaderboard_opt_in first.
+      if (withConsent) {
+        const patchRes = await fetch('/api/account', {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ leaderboard_opt_in: true }),
+        });
+        if (!patchRes.ok) {
+          const d = await patchRes.json();
+          throw new Error(d.error ?? 'Failed to save consent');
+        }
+        setAuthInfo(prev => ({ ...prev, leaderboardOptIn: true }));
+      }
+
+      const payload = {
+        avg_rarity_score: stats.averageRarityScore,
+        rarest_item_score: stats.rarestItems[0]?.rarityScore ?? 0,
+        rarest_item_title: stats.rarestItems[0]?.title ?? '',
+        rarest_item_artist: stats.rarestItems[0]?.artist ?? '',
+        collection_size: collection.length,
+      };
 
       const res = await fetch('/api/leaderboard', {
         method: 'POST',
@@ -319,7 +336,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
   const renderLeaderboardPanel = () => {
     if (!completed || !stats) return null;
 
-    const { discogsConnected, supabaseUserId } = authInfo;
+    const { discogsConnected, supabaseUserId, leaderboardOptIn } = authInfo;
     const canSubmit = supabaseUserId && discogsConnected;
 
     if (submitState === 'success') {
@@ -357,6 +374,40 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
       );
     }
 
+    // Consent gate: user hasn't opted in yet — show consent checkbox before submit.
+    if (!leaderboardOptIn) {
+      return (
+        <div className="mt-6 p-4 bg-minimal-gray-50 border border-minimal-gray-200 rounded-lg">
+          <p className="text-sm font-medium text-minimal-gray-800 mb-2">Submit your results to the leaderboard?</p>
+          <p className="text-xs text-minimal-gray-500 mb-3">
+            Avg rarity: {stats.averageRarityScore.toFixed(4)} · {collection.length} records
+          </p>
+          <label className="flex items-start gap-2 cursor-pointer mb-3">
+            <input
+              type="checkbox"
+              checked={consentChecked}
+              onChange={e => setConsentChecked(e.target.checked)}
+              className="mt-0.5 shrink-0"
+            />
+            <span className="text-xs text-minimal-gray-700">
+              I agree that my display name (or Discogs username if none set), rarity scores, and collection size will be publicly visible on the leaderboard.
+              You can opt out at any time in <a href="/account" className="underline">account settings</a>.
+            </span>
+          </label>
+          {submitState === 'error' && (
+            <p className="text-xs text-red-600 mb-2">{submitError}</p>
+          )}
+          <button
+            onClick={() => handleSubmitToLeaderboard(true)}
+            disabled={!consentChecked || submitState === 'submitting'}
+            className="btn-primary px-4 py-2 text-sm rounded-md whitespace-nowrap disabled:opacity-60"
+          >
+            {submitState === 'submitting' ? 'Submitting…' : 'Submit to Leaderboard'}
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="mt-6 p-4 bg-minimal-gray-50 border border-minimal-gray-200 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <div className="flex-1">
@@ -369,7 +420,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
           )}
         </div>
         <button
-          onClick={handleSubmitToLeaderboard}
+          onClick={() => handleSubmitToLeaderboard(false)}
           disabled={submitState === 'submitting'}
           className="btn-primary px-4 py-2 text-sm rounded-md whitespace-nowrap disabled:opacity-60"
         >
