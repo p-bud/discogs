@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { CollectionItem, WrappedStats } from '../models/types';
 import { computeWrappedStats } from '../utils/wrapped-stats';
+import { useReleaseDetails } from '../hooks/useReleaseDetails';
 import { handleDiscogsAuth } from '../utils/discogs-client';
 
 const TARGET_YEAR = new Date().getFullYear() - 1;
@@ -80,21 +81,37 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
   const [fromCache, setFromCache] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Raw collection passed to useReleaseDetails for community-data enrichment.
+  // The hook skips any item that already has haveCount/wantCount, so it's
+  // instant when the Supabase community cache is warm, and fills the gaps
+  // (fetching from Discogs) when it's cold.
+  const [collection, setCollection] = useState<CollectionItem[]>([]);
+  const {
+    enrichedReleases,
+    loading: enriching,
+    completed: enrichmentDone,
+  } = useReleaseDetails(collection);
+
+  // Re-compute stats once enrichment finishes (picks up rarity scores).
+  useEffect(() => {
+    if (enrichmentDone && enrichedReleases.length > 0) {
+      setWrappedStats(computeWrappedStats(enrichedReleases, TARGET_YEAR));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enrichmentDone]);
+
   const fetchAndCompute = async (forceRefresh = false) => {
     if (!username) return;
     setLoading(true);
     setError(null);
     setWrappedStats(null);
+    setCollection([]);
 
     try {
       const baseUrl = `/api/collection?username=${encodeURIComponent(username)}`;
       let releases: CollectionItem[] = [];
 
       if (forceRefresh) {
-        // Repopulate the cache from Discogs. The response includes correct
-        // dateAdded/genres/styles. rarityScore will be 0 on fresh data —
-        // the rarest record section reappears on the next non-forced page
-        // load once the community cache join restores rarity scores.
         const refreshRes = await fetch(`${baseUrl}&forceRefresh=true`);
         if (!refreshRes.ok) {
           const d = await refreshRes.json();
@@ -113,7 +130,10 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
         setFromCache(data.fromCache ?? false);
       }
 
+      // Compute initial stats immediately (genres/formats/decades render now).
+      // useReleaseDetails will enrich rarity scores and trigger a re-compute.
       setWrappedStats(computeWrappedStats(releases, TARGET_YEAR));
+      setCollection(releases);
     } catch (err: any) {
       setError(err.message || 'Failed to load collection');
     } finally {
@@ -278,7 +298,7 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
       )}
 
       {/* Rarest record added this year */}
-      {rarestAddition && (
+      {rarestAddition ? (
         <section>
           <h2 className="text-xl font-picnic text-minimal-black mb-4">
             Rarest Record You Added in {TARGET_YEAR}
@@ -308,10 +328,17 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
             </div>
           </div>
         </section>
-      )}
+      ) : enriching && totalAdded > 0 ? (
+        <section>
+          <h2 className="text-xl font-picnic text-minimal-black mb-4">
+            Rarest Record You Added in {TARGET_YEAR}
+          </h2>
+          <p className="text-minimal-gray-500 text-sm animate-pulse">Loading rarity data…</p>
+        </section>
+      ) : null}
 
       {/* Avg rarity comparison */}
-      {(avgRarityThisYear > 0 || avgRarityAllTime > 0) && (
+      {(avgRarityThisYear > 0 || avgRarityAllTime > 0) ? (
         <section>
           <h2 className="text-xl font-picnic text-minimal-black mb-4">Average Rarity</h2>
           <div className="flex gap-6 text-center">
@@ -329,7 +356,12 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
             </div>
           </div>
         </section>
-      )}
+      ) : enriching && totalAdded > 0 ? (
+        <section>
+          <h2 className="text-xl font-picnic text-minimal-black mb-4">Average Rarity</h2>
+          <p className="text-minimal-gray-500 text-sm animate-pulse">Loading rarity data…</p>
+        </section>
+      ) : null}
 
       {/* Footer note for partial data */}
       {showFooterNote && (
