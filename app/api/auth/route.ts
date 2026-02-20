@@ -10,7 +10,9 @@ export const dynamic = 'force-dynamic';
 /** Derives the app's base URL from env vars — never from untrusted request headers. */
 function getAppBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  return process.env.NODE_ENV === 'production' ? 'https://raerz.com' : 'http://localhost:3000';
+  // VERCEL_URL is automatically set on all Vercel deployments (including previews).
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return process.env.NODE_ENV === 'production' ? 'https://raerz.fyi' : 'http://localhost:3000';
 }
 
 export async function GET() {
