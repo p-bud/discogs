@@ -91,8 +91,10 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
       let releases: CollectionItem[] = [];
 
       if (forceRefresh) {
-        // Step 1: repopulate cache from Discogs — this returns fresh items with
-        // dateAdded/genres/styles but rarityScore=0.
+        // Repopulate the cache from Discogs. The response includes correct
+        // dateAdded/genres/styles. rarityScore will be 0 on fresh data —
+        // the rarest record section reappears on the next non-forced page
+        // load once the community cache join restores rarity scores.
         const refreshRes = await fetch(`${baseUrl}&forceRefresh=true`);
         if (!refreshRes.ok) {
           const d = await refreshRes.json();
@@ -100,23 +102,6 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
         }
         const refreshData = await refreshRes.json();
         releases = refreshData.releases ?? [];
-
-        // Step 2: try reading back from cache, which LEFT JOINs
-        // release_community_cache so rarity scores are present.
-        // Only adopt the cache result if it returns items — if anything goes
-        // wrong (0 rows, network error, etc.) we keep the fresh Discogs data
-        // so the user never sees "0 records".
-        try {
-          const cacheRes = await fetch(baseUrl);
-          if (cacheRes.ok) {
-            const cacheData = await cacheRes.json();
-            if ((cacheData.releases?.length ?? 0) > 0) {
-              releases = cacheData.releases;
-            }
-          }
-        } catch {
-          // Non-fatal — stick with the fresh Discogs data above.
-        }
       } else {
         const res = await fetch(baseUrl);
         if (!res.ok) {
