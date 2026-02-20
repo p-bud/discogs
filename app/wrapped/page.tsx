@@ -1,30 +1,20 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Header from '../components/Header';
 import WrappedAnalysis from '../components/WrappedAnalysis';
+import { useAuth } from '../hooks/useAuth';
 
 export default function WrappedPage() {
-  const [discogsUsername, setDiscogsUsername] = useState<string | null>(null);
-  const [checked, setChecked] = useState(false);
+  const { username, loading } = useAuth();
 
-  useEffect(() => {
-    fetch('/api/auth/status')
-      .then(r => r.json())
-      .then(data => {
-        setDiscogsUsername(data?.username ?? null);
-      })
-      .catch(() => {})
-      .finally(() => setChecked(true));
-  }, []);
-
-  if (!checked) return null;
+  if (loading) return null;
 
   return (
     <div className="py-8">
       <Header />
       <div className="max-w-4xl mx-auto px-4">
-        <WrappedAnalysis username={discogsUsername} />
+        <WrappedAnalysis username={username} />
       </div>
     </div>
   );

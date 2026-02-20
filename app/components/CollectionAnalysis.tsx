@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useReleaseDetails } from '../hooks/useReleaseDetails';
+import { useAuth } from '../hooks/useAuth';
 import { CollectionItem, CollectionStats } from '../models/types';
 import { calculateCollectionStats } from '../utils/client-collection';
 import AuthModal from './AuthModal';
@@ -43,14 +44,17 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
   const [fromCache, setFromCache] = useState(false);
   const [cachedAt, setCachedAt] = useState<string | null>(null);
 
-  // Auth state for leaderboard submission
-  const [authInfo, setAuthInfo] = useState<AuthInfo>({
-    discogsConnected: false,
-    discogsUsername: null,
-    supabaseUserId: null,
-    supabaseLinkedUsername: null,
-    leaderboardOptIn: false,
-  });
+  // Auth — shared singleton fetch; Supabase session tracked separately for
+  // real-time sign-in/out (e.g. via Header AuthModal) without a duplicate fetch.
+  const auth = useAuth();
+  const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
+  const authInfo: AuthInfo = {
+    discogsConnected:       auth.authenticated,
+    discogsUsername:        auth.username,
+    supabaseUserId,
+    supabaseLinkedUsername: auth.supabaseLinkedUsername,
+    leaderboardOptIn:       auth.leaderboard_opt_in,
+  };
   const [consentChecked, setConsentChecked] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
@@ -64,31 +68,15 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
     error: communityDataError
   } = useReleaseDetails(collection);
 
-  // Fetch Discogs auth status and populate auth info.
-  // Only auto-fetch the collection here when no propUsername was provided by
-  // the parent page (i.e. the component is used standalone). When the page
-  // already resolved the username and passed it as a prop, the propUsername
-  // useEffect below handles the fetch to avoid double-fetching.
+  // Auto-fetch collection when auth resolves and no propUsername was given
+  // (standalone usage — parent page always provides propUsername when authenticated).
   useEffect(() => {
-    const controller = new AbortController();
-    fetch('/api/auth/status', { signal: controller.signal })
-      .then(r => r.json())
-      .then(data => {
-        setAuthInfo(prev => ({
-          ...prev,
-          discogsConnected: data?.authenticated ?? false,
-          discogsUsername: data?.username ?? null,
-          supabaseLinkedUsername: data?.supabaseLinkedUsername ?? null,
-          leaderboardOptIn: data?.leaderboard_opt_in ?? false,
-        }));
-        if (!propUsername && data?.authenticated && data?.username) {
-          setUsername((u) => u || data.username);
-          fetchCollection(data.username);
-        }
-      })
-      .catch(err => { if (err.name !== 'AbortError') { /* non-fatal */ } });
-    return () => controller.abort();
-  }, []);
+    if (!auth.loading && !propUsername && auth.authenticated && auth.username) {
+      setUsername((u) => u || auth.username!);
+      fetchCollection(auth.username);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.loading]);
 
   // Subscribe to Supabase auth state — explicit getSession() handles the cold-load
   // case where onAuthStateChange fires before cookie storage is hydrated.
@@ -97,29 +85,19 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
 
     // Eagerly read current session.
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setAuthInfo(prev => ({ ...prev, supabaseUserId: session?.user?.id ?? null }));
+      setSupabaseUserId(session?.user?.id ?? null);
     });
 
     // Also subscribe so sign-in/out from any component (e.g. Header) is picked up.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthInfo(prev => ({ ...prev, supabaseUserId: session?.user?.id ?? null }));
+      setSupabaseUserId(session?.user?.id ?? null);
     });
     return () => subscription.unsubscribe();
   }, []);
 
-  const refreshAuthInfo = useCallback(async () => {
-    try {
-      const data = await fetch('/api/auth/status').then(r => r.json());
-      setAuthInfo(prev => ({
-        ...prev,
-        discogsConnected: data?.authenticated ?? false,
-        discogsUsername: data?.username ?? null,
-        supabaseLinkedUsername: data?.supabaseLinkedUsername ?? null,
-        leaderboardOptIn: data?.leaderboard_opt_in ?? false,
-      }));
-      if (data?.username) setUsername((u) => u || data.username);
-    } catch { /* non-fatal */ }
-  }, []);
+  const refreshAuthInfo = useCallback(() => {
+    auth.refresh();
+  }, [auth.refresh]);
 
   // Update stats when enriched data becomes available.
   useEffect(() => {
@@ -217,7 +195,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
           const d = await patchRes.json();
           throw new Error(d.error ?? 'Failed to save consent');
         }
-        setAuthInfo(prev => ({ ...prev, leaderboardOptIn: true }));
+        auth.refresh();
       }
 
       const payload = {
@@ -492,26 +470,28 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
     <div className="container mx-auto p-4">
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-4">Discogs Collection Analyzer</h1>
-        <div className="flex space-x-2">
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter Discogs username"
-            className="border p-2 rounded flex-grow"
-          />
-          <button
-            onClick={() => fetchCollection()}
-            disabled={loading || communityDataLoading}
-            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:bg-indigo-300"
-          >
-            Analyze
-          </button>
-        </div>
-        {authInfo.discogsConnected && authInfo.discogsUsername && (
-          <p className="text-xs text-minimal-gray-500 mt-1.5">
-            Signed in as <span className="font-medium">{authInfo.discogsUsername}</span>
+        {authInfo.discogsConnected && authInfo.discogsUsername ? (
+          <p className="text-minimal-gray-600 text-sm">
+            Analyzing collection for{' '}
+            <span className="font-semibold text-minimal-black">{authInfo.discogsUsername}</span>
           </p>
+        ) : (
+          <div className="flex space-x-2">
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter Discogs username"
+              className="border p-2 rounded flex-grow"
+            />
+            <button
+              onClick={() => fetchCollection()}
+              disabled={loading || communityDataLoading}
+              className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:bg-indigo-300"
+            >
+              Analyze
+            </button>
+          </div>
         )}
         {fromCache && cachedAt && (
           <div className="flex items-center gap-2 mt-2">
