@@ -213,24 +213,63 @@ describe('getUserCollection — Supabase cache layer', () => {
   });
 
   it('after Discogs fetch → upserts rows to user_collection_cache', async () => {
-    mockSupabaseClient.from.mockReturnValue(buildFreshnessMock(null));
+    const freshnessMock = buildFreshnessMock(null);
+    mockSupabaseClient.from.mockReturnValue(freshnessMock);
     mockDiscogsGet.mockResolvedValue(makeDiscogsCollectionResponse('u_write'));
 
     await getUserCollection('u_write');
 
-    // Allow the fire-and-forget upsert to complete
-    await new Promise(resolve => setTimeout(resolve, 10));
+    // Upsert is awaited inside getUserCollection, so it completes before return
+    expect(freshnessMock.upsert).toHaveBeenCalled();
+    const batch = freshnessMock.upsert.mock.calls[0][0];
+    expect(batch).toHaveLength(1);
+    expect(batch[0].release_id).toBe('999');
+    expect(batch[0].discogs_username).toBe('u_write');
+  });
 
-    const upsertCalls = mockSupabaseClient.from.mock.calls
-      .filter(([table]: [string]) => table === 'user_collection_cache');
-    expect(upsertCalls.length).toBeGreaterThan(0);
+  it('duplicate release_ids in collection → upsert batch deduplicated (prevents PG error 21000)', async () => {
+    const freshnessMock = buildFreshnessMock(null);
+    mockSupabaseClient.from.mockReturnValue(freshnessMock);
 
-    // The upsert was called on the from() return value
-    const fromReturnValue = mockSupabaseClient.from.mock.results.find(
-      (r, i) => mockSupabaseClient.from.mock.calls[i]?.[0] === 'user_collection_cache'
-        && r.value?.upsert !== undefined,
-    );
-    expect(fromReturnValue).toBeDefined();
+    // Same release.id appearing twice — user owns two copies of the same record
+    mockDiscogsGet.mockResolvedValue({
+      data: {
+        releases: [
+          {
+            id: 42,
+            basic_information: {
+              title: 'Double Copy',
+              artists: [{ name: 'Artist' }],
+              year: 1980,
+              formats: [{ name: 'Vinyl' }],
+              cover_image: '',
+            },
+          },
+          {
+            id: 42, // duplicate
+            basic_information: {
+              title: 'Double Copy',
+              artists: [{ name: 'Artist' }],
+              year: 1980,
+              formats: [{ name: 'Vinyl' }],
+              cover_image: '',
+            },
+          },
+        ],
+        pagination: { pages: 1 },
+      },
+    });
+
+    const result = await getUserCollection('u_dedup');
+
+    // All items returned to caller (both copies preserved)
+    expect(result.items).toHaveLength(2);
+
+    // Upsert batch deduplicated — only 1 row sent to Supabase
+    expect(freshnessMock.upsert).toHaveBeenCalled();
+    const batch = freshnessMock.upsert.mock.calls[0][0];
+    expect(batch).toHaveLength(1);
+    expect(batch[0].release_id).toBe('42');
   });
 });
 

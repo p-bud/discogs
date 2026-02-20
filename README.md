@@ -27,7 +27,7 @@ A tool for Discogs collectors to analyze the rarity of their record collections,
 | Auth (users) | Supabase email/password |
 | Database | Supabase (Postgres) |
 | Deployment | Vercel |
-| Tests | Vitest (124 tests) |
+| Tests | Vitest (125 tests) |
 
 ---
 
@@ -73,15 +73,13 @@ A tool for Discogs collectors to analyze the rarity of their record collections,
 
 ### Collection Analysis
 
-1. User enters a Discogs username on `/collection`
+1. `/collection` page resolves the Discogs username from `/api/auth/status` on mount and passes it directly to the analysis component — authenticated users see their collection immediately with no form to fill in
 2. `GET /api/collection` checks `user_collection_cache` in Supabase (7-day TTL)
    - **Cache hit:** returns enriched items in <200ms — `fromCache: true`
-   - **Cache miss:** paginates Discogs API (100 items/page, up to 20 pages / 2,000 items), then writes results to cache asynchronously
+   - **Cache miss:** paginates Discogs API (100 items/page, up to 20 pages / 2,000 items), deduplicates by `release_id`, then writes results to cache (awaited — Vercel cuts off async work after response)
 3. Client receives basic items (title, artist, year, format, cover image)
-4. `useReleaseDetails` hook fetches have/want counts in batches of 10 via `GET /api/release/[id]`
-   - Items already enriched from cache (haveCount > 0) are skipped entirely
-   - Each `/api/release/[id]` call checks `release_community_cache` first
-5. `calculateCollectionStats()` runs client-side once all data is loaded
+4. When `fromCache: true` items already carry `haveCount`/`wantCount`/`rarityScore` from the Supabase RPC join — stats are calculated immediately without waiting for `useReleaseDetails`
+5. `useReleaseDetails` hook fetches have/want counts in batches of 10 via `GET /api/release/[id]` for any items missing community data; skips the 250ms inter-batch delay when no API call was needed
 6. User can optionally submit stats to the leaderboard
 
 **Rarity score:** `want / have` (0 if have = 0). A score > 1 means more people want it than own it.
@@ -138,6 +136,8 @@ Two Supabase tables, both written exclusively via the service-role client (no RL
 If two users own the same record, the second user benefits from the first user's Discogs fetch.
 
 A Postgres function `get_user_collection_with_community(username)` LEFT JOINs the two tables server-side, avoiding URL-length limits that arise when passing 2,000+ IDs to a PostgREST `.in()` query.
+
+**Deduplication:** Discogs allows a user to own multiple copies of the same release (same `release_id`, different `instance_id`). The batch upsert deduplicates by `release_id` before writing — sending duplicate conflict targets in a single `INSERT … ON CONFLICT DO UPDATE` raises PostgreSQL error `21000` and silently fails the entire batch.
 
 ---
 
