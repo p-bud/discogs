@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { CollectionItem, WrappedStats } from '../models/types';
 import { computeWrappedStats } from '../utils/wrapped-stats';
+import { handleDiscogsAuth } from '../utils/discogs-client';
 
 const TARGET_YEAR = new Date().getFullYear() - 1;
 const ACCENT = '#4f46e5';
@@ -119,13 +120,13 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
       <div className="text-center py-16">
         <p className="text-4xl mb-4 font-picnic text-minimal-black">Your {TARGET_YEAR} in Records</p>
         <p className="text-minimal-gray-500 mb-6">Connect your Discogs account to see your Wrapped stats.</p>
-        <a
-          href="/api/auth"
+        <button
+          onClick={handleDiscogsAuth}
           className="inline-block px-6 py-3 rounded text-white font-semibold"
           style={{ backgroundColor: ACCENT }}
         >
           Connect Discogs
-        </a>
+        </button>
       </div>
     );
   }
