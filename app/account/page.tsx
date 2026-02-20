@@ -30,6 +30,7 @@ export default function AccountPage() {
   // Leaderboard toggles
   const [optInSaving, setOptInSaving] = useState(false);
   const [showDiscogsLinkSaving, setShowDiscogsLinkSaving] = useState(false);
+  const [toggleError, setToggleError] = useState<string | null>(null);
 
   // Delete account
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -121,6 +122,9 @@ export default function AccountPage() {
 
   const handleToggleOptIn = async (value: boolean) => {
     if (!account) return;
+    setToggleError(null);
+    // Optimistic update — move the toggle immediately.
+    setAccount(prev => prev ? { ...prev, leaderboard_opt_in: value } : prev);
     setOptInSaving(true);
     try {
       const res = await fetch('/api/account', {
@@ -128,9 +132,15 @@ export default function AccountPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ leaderboard_opt_in: value }),
       });
-      if (res.ok) {
-        setAccount(prev => prev ? { ...prev, leaderboard_opt_in: value } : prev);
+      if (!res.ok) {
+        // Revert on failure.
+        setAccount(prev => prev ? { ...prev, leaderboard_opt_in: !value } : prev);
+        const data = await res.json();
+        setToggleError(data.error ?? 'Failed to save setting');
       }
+    } catch {
+      setAccount(prev => prev ? { ...prev, leaderboard_opt_in: !value } : prev);
+      setToggleError('Failed to save setting');
     } finally {
       setOptInSaving(false);
     }
@@ -138,6 +148,9 @@ export default function AccountPage() {
 
   const handleToggleShowDiscogsLink = async (value: boolean) => {
     if (!account) return;
+    setToggleError(null);
+    // Optimistic update — move the toggle immediately.
+    setAccount(prev => prev ? { ...prev, show_discogs_link: value } : prev);
     setShowDiscogsLinkSaving(true);
     try {
       const res = await fetch('/api/account', {
@@ -145,9 +158,15 @@ export default function AccountPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ show_discogs_link: value }),
       });
-      if (res.ok) {
-        setAccount(prev => prev ? { ...prev, show_discogs_link: value } : prev);
+      if (!res.ok) {
+        // Revert on failure.
+        setAccount(prev => prev ? { ...prev, show_discogs_link: !value } : prev);
+        const data = await res.json();
+        setToggleError(data.error ?? 'Failed to save setting');
       }
+    } catch {
+      setAccount(prev => prev ? { ...prev, show_discogs_link: !value } : prev);
+      setToggleError('Failed to save setting');
     } finally {
       setShowDiscogsLinkSaving(false);
     }
@@ -347,6 +366,8 @@ export default function AccountPage() {
               />
             </button>
           </div>
+
+          {toggleError && <p className="text-xs text-red-600">{toggleError}</p>}
 
           {account.display_name && (
             <div className="flex items-start justify-between gap-4 pt-2 border-t border-minimal-gray-100">
