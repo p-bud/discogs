@@ -79,8 +79,15 @@ export function useReleaseDetails(releases: CollectionItem[], batchSize = 10) {
           setProgress((currentBatch / totalBatches) * 100);
           setEnrichedReleases([...updatedReleases]);
           
-          // Add a small delay to avoid rate limits
-          await new Promise(resolve => setTimeout(resolve, 250));
+          // Only delay between batches if this batch actually hit the Discogs
+          // API. When items already have community data (e.g. from Supabase
+          // cache) no API call is made so no rate-limit delay is needed.
+          const batchNeededFetch = batchReleases.some(
+            r => r.haveCount === 0 && r.wantCount === 0,
+          );
+          if (batchNeededFetch) {
+            await new Promise(resolve => setTimeout(resolve, 250));
+          }
         }
         
         setCompleted(true);

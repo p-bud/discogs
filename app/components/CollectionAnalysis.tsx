@@ -165,11 +165,20 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
       const data = await response.json();
       setCollection(data.releases);
       setLimitedResults(data.limitedResults || false);
-      setStats(data.stats);
       setFromCache(data.fromCache ?? false);
       setCachedAt(data.cachedAt ?? null);
       setLoadingMessage(null);
       setDetailsLoading(true);
+
+      // When serving from cache the releases already carry community data
+      // (haveCount/wantCount/rarityScore from the Supabase RPC join).
+      // Calculate stats immediately so the UI renders without waiting for
+      // useReleaseDetails to iterate through all batches with 250ms pauses.
+      if (data.fromCache && data.releases?.length > 0) {
+        setStats(calculateCollectionStats(data.releases));
+      } else {
+        setStats(data.stats);
+      }
     } catch (err: any) {
       console.error('Error fetching collection:', err);
       setError(err.message || 'Error fetching collection');
