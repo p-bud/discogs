@@ -34,7 +34,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     // Get the collection (basic info only, fast)
     try {
-      const { items: collection, hitPageCap, fromCache, cachedAt, _cacheDebug } = await getUserCollection(parsed.data, forceRefresh);
+      const { items: collection, hitPageCap, fromCache, cachedAt } = await getUserCollection(parsed.data, forceRefresh);
 
       console.timeEnd('collection-fetch'); // Log how long it took
 
@@ -54,7 +54,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         limitedResults: hitPageCap,
         fromCache,
         cachedAt,
-        _cacheDebug,
       });
       
     } catch (error: any) {

@@ -29,7 +29,7 @@ const TIME_BUDGET_MS = 8_000; // Leave headroom before Vercel 10s timeout
 export async function getUserCollection(
   username: string,
   forceRefresh = false,
-): Promise<{ items: CollectionItem[]; hitPageCap: boolean; fromCache: boolean; cachedAt: string | null; _cacheDebug?: Record<string, unknown> }> {
+): Promise<{ items: CollectionItem[]; hitPageCap: boolean; fromCache: boolean; cachedAt: string | null }> {
   try {
     const supabase = getSupabaseClient();
 
@@ -172,17 +172,10 @@ export async function getUserCollection(
       timestamp: Date.now(),
     };
 
-    // ── 5. Persist to Supabase (awaited — fire-and-forget is cut short by Vercel serverless) ──
-    let _cacheDebug: Record<string, unknown> = {
-      supabaseAvailable: !!supabase,
-      itemCount: basicItems.length,
-    };
-
+    // ── 5. Persist to Supabase (awaited — Vercel serverless cuts off async work after response) ──
     if (supabase && basicItems.length > 0) {
       const BATCH_SIZE = 500;
       const syncedAt = new Date().toISOString();
-      let batchesWritten = 0;
-      let writeError: unknown = null;
 
       // Deduplicate by release_id: a user can own multiple copies of the same
       // release (same release.id, different instance_id). PostgreSQL raises
@@ -212,22 +205,17 @@ export async function getUserCollection(
             .upsert(batch, { onConflict: 'discogs_username,release_id' });
 
           if (error) {
-            writeError = error;
-            console.error('[cache-write] upsert error:', JSON.stringify(error));
+            console.warn('Supabase collection upsert error:', error);
             break;
           }
-          batchesWritten++;
         }
       } catch (err) {
-        writeError = String(err);
-        console.error('[cache-write] exception during upsert:', err);
+        console.warn('Supabase collection cache write failed:', err);
       }
-      _cacheDebug = { ..._cacheDebug, itemCount: uniqueItems.length, batchesWritten, writeError };
-      console.log('[cache-write] result:', JSON.stringify(_cacheDebug));
     }
 
     console.log(`Processed ${basicItems.length} releases with basic data${hitPageCap ? ' (page cap reached)' : ''}`);
-    return { items: basicItems, hitPageCap, fromCache: false, cachedAt: null, _cacheDebug };
+    return { items: basicItems, hitPageCap, fromCache: false, cachedAt: null };
   } catch (error) {
     console.error('Error fetching collection:', error);
     throw error;
