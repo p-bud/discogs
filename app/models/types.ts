@@ -59,6 +59,23 @@ export interface CollectionItem {
   haveCount: number;
   wantCount: number;
   rarityScore: number; // want/have ratio
+  dateAdded?: string | null;  // ISO 8601 e.g. "2025-03-15T14:22:00-07:00"
+  genres?: string[];           // e.g. ["Rock", "Electronic"]
+  styles?: string[];           // e.g. ["Punk", "Synth-pop"]
+}
+
+export interface WrappedStats {
+  year: number;
+  totalAdded: number;
+  hasPartialData: boolean;   // true if any items have null dateAdded (pre-migration cache)
+  genreBreakdown:  { genre: string;  count: number }[];  // top 8
+  styleBreakdown:  { style: string;  count: number }[];  // top 8
+  formatBreakdown: { format: string; count: number }[];
+  decadeBreakdown: { decade: string; count: number }[];
+  rarestAddition:      CollectionItem | null;  // highest rarityScore > 0 in target year
+  mostCommonAddition:  CollectionItem | null;  // lowest  rarityScore > 0 in target year
+  avgRarityThisYear: number;
+  avgRarityAllTime:  number;
 }
 
 export interface CollectionStats {

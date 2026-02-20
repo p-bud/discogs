@@ -82,12 +82,15 @@ function makeDiscogsCollectionResponse(username: string) {
       releases: [
         {
           id: 999,
+          date_added: '2025-04-01T12:00:00-07:00',
           basic_information: {
             title: 'Disco Album',
             artists: [{ name: 'Disco Artist' }],
             year: 1979,
             formats: [{ name: 'Vinyl' }],
             cover_image: '',
+            genres: ['Funk / Soul'],
+            styles: ['Disco'],
           },
         },
       ],
@@ -130,6 +133,9 @@ describe('getUserCollection — Supabase cache layer', () => {
           formats: ['Vinyl'],
           cover_image: '',
           synced_at: syncedAt,
+          date_added: '2025-03-15T10:00:00Z',
+          genres: ['Rock'],
+          styles: ['Classic Rock'],
           have_count: 200,
           want_count: 80,
           rarity_score: '0.4000',
@@ -147,6 +153,9 @@ describe('getUserCollection — Supabase cache layer', () => {
     expect(result.items[0].haveCount).toBe(200);
     expect(result.items[0].wantCount).toBe(80);
     expect(result.items[0].rarityScore).toBeCloseTo(0.4);
+    expect(result.items[0].dateAdded).toBe('2025-03-15T10:00:00Z');
+    expect(result.items[0].genres).toEqual(['Rock']);
+    expect(result.items[0].styles).toEqual(['Classic Rock']);
     expect(mockDiscogsGet).not.toHaveBeenCalled();
   });
 
@@ -211,7 +220,7 @@ describe('getUserCollection — Supabase cache layer', () => {
     expect(mockDiscogsGet).toHaveBeenCalledOnce();
   });
 
-  it('after Discogs fetch → upserts rows to user_collection_cache', async () => {
+  it('after Discogs fetch → upserts rows to user_collection_cache with new fields', async () => {
     const freshnessMock = buildFreshnessMock(null);
     mockSupabaseClient.from.mockReturnValue(freshnessMock);
     mockDiscogsGet.mockResolvedValue(makeDiscogsCollectionResponse('u_write'));
@@ -224,6 +233,10 @@ describe('getUserCollection — Supabase cache layer', () => {
     expect(batch).toHaveLength(1);
     expect(batch[0].release_id).toBe('999');
     expect(batch[0].discogs_username).toBe('u_write');
+    // New wrapped fields
+    expect(batch[0].date_added).toBe('2025-04-01T12:00:00-07:00');
+    expect(batch[0].genres).toEqual(['Funk / Soul']);
+    expect(batch[0].styles).toEqual(['Disco']);
   });
 
   it('duplicate release_ids in collection → upsert batch deduplicated (prevents PG error 21000)', async () => {
