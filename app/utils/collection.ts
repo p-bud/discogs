@@ -58,6 +58,9 @@ export async function getUserCollection(
                 haveCount: row.have_count ?? 0,
                 wantCount: row.want_count ?? 0,
                 rarityScore: Number(row.rarity_score ?? 0),
+                dateAdded: row.date_added ?? null,
+                genres:    Array.isArray(row.genres) ? row.genres : [],
+                styles:    Array.isArray(row.styles) ? row.styles : [],
               }));
 
               console.log(`Serving ${items.length} items from Supabase cache for ${username}`);
@@ -147,6 +150,9 @@ export async function getUserCollection(
       haveCount: 0,
       wantCount: 0,
       rarityScore: 0,
+      dateAdded: release.date_added ?? null,
+      genres:    release.basic_information?.genres ?? [],
+      styles:    release.basic_information?.styles ?? [],
     }));
 
     // ── 4. Persist to Supabase (awaited — Vercel serverless cuts off async work after response) ──
@@ -175,6 +181,9 @@ export async function getUserCollection(
             formats: item.format,
             cover_image: item.coverImage,
             synced_at: syncedAt,
+            date_added: item.dateAdded ?? null,
+            genres:     item.genres ?? [],
+            styles:     item.styles ?? [],
           }));
 
           const { error } = await supabase
