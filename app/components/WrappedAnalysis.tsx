@@ -69,15 +69,29 @@ function RarityCard({ label, item }: { label: string; item: CollectionItem }) {
 }
 
 // ── Per-session page cache ───────────────────────────────────────────────────
-// Keyed by username. Persists across page navigations (module scope).
+// Two-layer: module-level Map (navigation) + sessionStorage (browser refresh).
 // Cleared on forceRefresh so "Refresh Collection" always re-fetches.
 
 interface WrappedPageCache {
-  releases: CollectionItem[];
   stats: WrappedStats;
   fromCache: boolean;
 }
 const wrappedPageCache = new Map<string, WrappedPageCache>();
+
+const STORAGE_KEY = (u: string) => `wrapped_v1_${u}`;
+function readStorage(u: string): WrappedPageCache | null {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY(u));
+    return raw ? (JSON.parse(raw) as WrappedPageCache) : null;
+  } catch { return null; }
+}
+function writeStorage(u: string, data: WrappedPageCache): void {
+  try { sessionStorage.setItem(STORAGE_KEY(u), JSON.stringify(data)); }
+  catch { /* private mode / quota — silent */ }
+}
+function clearStorage(u: string): void {
+  try { sessionStorage.removeItem(STORAGE_KEY(u)); } catch {}
+}
 
 // ── Main component ──────────────────────────────────────────────────────────
 
@@ -104,13 +118,15 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
   } = useReleaseDetails(collection);
 
   // Re-compute stats once enrichment finishes (picks up rarity scores)
-  // and write the final result to the page cache.
+  // and write the final result to both cache layers.
   useEffect(() => {
     if (enrichmentDone && enrichedReleases.length > 0) {
       const stats = computeWrappedStats(enrichedReleases, TARGET_YEAR);
       setWrappedStats(stats);
       if (username) {
-        wrappedPageCache.set(username, { releases: enrichedReleases, stats, fromCache });
+        const entry: WrappedPageCache = { stats, fromCache };
+        wrappedPageCache.set(username, entry);
+        writeStorage(username, entry);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,17 +176,22 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
 
   useEffect(() => {
     if (!username) return;
-    const cached = wrappedPageCache.get(username);
-    if (cached) {
-      setWrappedStats(cached.stats);
-      setFromCache(cached.fromCache);
+    // 1. In-memory (navigation)
+    const mem = wrappedPageCache.get(username);
+    if (mem) { setWrappedStats(mem.stats); setFromCache(mem.fromCache); return; }
+    // 2. sessionStorage (browser refresh)
+    const stored = readStorage(username);
+    if (stored) {
+      wrappedPageCache.set(username, stored);
+      setWrappedStats(stored.stats);
+      setFromCache(stored.fromCache);
       return;
     }
     fetchAndCompute();
   }, [username]);
 
   const handleRefresh = () => {
-    if (username) wrappedPageCache.delete(username);
+    if (username) { wrappedPageCache.delete(username); clearStorage(username); }
     setRefreshing(true);
     fetchAndCompute(true);
   };
