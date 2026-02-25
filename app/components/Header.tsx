@@ -15,18 +15,18 @@ const Header: React.FC = () => {
   }, []);
 
   const linkClass = (href: string) =>
-    'block py-2 px-3 rounded transition-colors duration-200 ' +
+    'block py-2 px-3 transition-colors duration-200 ' +
     (pathname === href || (href !== '/' && pathname.startsWith(href))
-      ? 'text-amber-400 font-medium bg-white/5'
-      : 'text-minimal-gray-500 hover:text-white hover:bg-white/5');
+      ? 'text-[#00e5ff] font-medium'
+      : 'text-white/40 hover:text-white');
 
   return (
-    <header className="sticky top-0 z-40 bg-[#0d0d14]/80 backdrop-blur-md border-b border-white/10 mb-6">
+    <header className="sticky top-0 z-40 bg-black border-b border-white/10 mb-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="py-6 flex flex-col items-center sm:flex-row sm:justify-between">
           <div className="text-center sm:text-left">
             <h1 className="text-2xl font-picnic text-white m-0">
-              <Link href="/" className="hover:text-amber-400 transition-colors duration-200">
+              <Link href="/" className="hover:text-[#00e5ff] transition-colors duration-200">
                 Raerz
               </Link>
             </h1>

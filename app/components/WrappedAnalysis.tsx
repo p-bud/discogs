@@ -8,7 +8,7 @@ import { handleDiscogsAuth } from '../utils/discogs-client';
 import WrappedView from './WrappedView';
 
 const DEFAULT_YEAR = new Date().getFullYear() - 1;
-const ACCENT = '#f59e0b';
+const ACCENT = '#00e5ff';
 
 // ── Per-session page cache ───────────────────────────────────────────────────
 // Two-layer: module-level Map (navigation) + sessionStorage (browser refresh).

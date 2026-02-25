@@ -2,7 +2,7 @@ import React from 'react';
 import Image from 'next/image';
 import { CollectionItem, WrappedStats } from '../models/types';
 
-const ACCENT = '#f59e0b';
+const ACCENT = '#00e5ff';
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
@@ -103,11 +103,11 @@ export default function WrappedView({
 
       {/* Partial-data full banner */}
       {showFullBanner && onRefresh && (
-        <div className="border border-amber-700/60 bg-amber-950/40 rounded-lg p-5 text-center">
-          <p className="font-semibold text-amber-300 mb-2">
+        <div className="border border-white/15 bg-white/5 rounded-lg p-5 text-center">
+          <p className="font-semibold text-white mb-2">
             Your collection was cached before Wrapped launched.
           </p>
-          <p className="text-amber-400/80 text-sm mb-4">
+          <p className="text-white/50 text-sm mb-4">
             Refresh to generate your {year} stats.
           </p>
           <button
@@ -122,9 +122,9 @@ export default function WrappedView({
       )}
 
       {/* Hero card */}
-      <div className="rounded-2xl p-8 text-center text-white animate-fade-in" style={{ backgroundColor: ACCENT }}>
-        <p className="text-7xl sm:text-8xl font-picnic font-bold leading-none">{totalAdded}</p>
-        <p className="text-xl mt-3 opacity-90">
+      <div className="border border-white/10 p-12 text-center animate-fade-in">
+        <p className="text-8xl sm:text-9xl font-syne font-bold leading-none" style={{ color: ACCENT }}>{totalAdded}</p>
+        <p className="text-lg mt-4 text-white/50 uppercase tracking-widest">
           record{totalAdded !== 1 ? 's' : ''} added in {year}
         </p>
       </div>
@@ -229,8 +229,8 @@ export default function WrappedView({
 
       {/* Footer note for partial data */}
       {showFooterNote && onRefresh && (
-        <div className="border border-amber-700/60 bg-amber-950/40 rounded-lg p-4 flex items-center justify-between gap-4">
-          <p className="text-amber-300 text-sm">
+        <div className="border border-white/15 bg-white/5 rounded-lg p-4 flex items-center justify-between gap-4">
+          <p className="text-white/50 text-sm">
             Some older items are missing date data. Refresh for complete stats.
           </p>
           <button

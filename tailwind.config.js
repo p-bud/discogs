@@ -8,28 +8,28 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Dark palette — token remap
+        // Tidal-inspired dark palette
         minimal: {
-          black: '#f0f0f8',      // Near-white text
-          white: '#0d0d14',      // Dark background
+          black: '#ffffff',      // Pure white text
+          white: '#000000',      // Pure black background
           gray: {
-            50:  '#111118',
-            100: '#1a1a28',
-            200: '#252538',
-            300: '#353550',
-            400: '#5a5a78',
-            500: '#8888a8',
-            600: '#a0a0c0',
-            700: '#c0c0d8',
-            800: '#dcdcec',
-            900: '#f0f0f8',
+            50:  '#0a0a0a',
+            100: '#111111',
+            200: '#1c1c1c',
+            300: '#333333',
+            400: '#555555',
+            500: '#888888',
+            600: '#aaaaaa',
+            700: '#cccccc',
+            800: '#e0e0e0',
+            900: '#f5f5f5',
           },
-          accent: '#f59e0b',     // Amber accent
-          'accent-light': '#fbbf24',
-          'accent-dark': '#d97706',
-          error: '#ef4444',      // Error red
-          success: '#10b981',    // Success green
-          warning: '#f59e0b',    // Warning yellow
+          accent: '#00e5ff',     // Tidal cyan
+          'accent-light': '#7fffff',
+          'accent-dark': '#00b0cc',
+          error: '#ef4444',
+          success: '#10b981',
+          warning: '#f59e0b',
         },
         // Keep existing colors for backward compatibility
         retro: {

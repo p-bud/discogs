@@ -29,50 +29,43 @@ export default function Home() {
     <>
       <Header />
 
-      {/* Dark hero — full bleed */}
-      <section className="relative min-h-[88vh] flex items-center justify-center bg-[#0d0d14] text-center px-4 overflow-hidden">
-        <div className="hero-grid absolute inset-0 pointer-events-none" />
-        <div className="relative max-w-4xl mx-auto">
-          <h2 className="text-7xl sm:text-9xl font-syne font-bold uppercase tracking-tight text-white leading-none mb-6 animate-fade-in-up">
+      {/* Hero — full bleed, bottom-anchored, editorial */}
+      <section className="min-h-[90vh] flex items-end bg-black px-8 sm:px-16 pb-20 overflow-hidden">
+        <div className="w-full max-w-6xl">
+          <h2 className="text-[clamp(3rem,11vw,9rem)] font-syne font-bold uppercase leading-none tracking-tighter text-white mb-10 animate-fade-in-up">
             Find the<br />Rarest Records
           </h2>
-          <p
-            className="text-amber-200/60 text-lg max-w-xl mx-auto mb-10 animate-fade-in-up"
-            style={{ animationDelay: '150ms' }}
-          >
-            Analyze your Discogs vinyl collection to discover rarity scores, see your Wrapped
-            stats, and compete on the leaderboard.
-          </p>
           <div
-            className="flex flex-wrap gap-4 justify-center animate-fade-in-up"
-            style={{ animationDelay: '300ms' }}
+            className="flex flex-wrap items-center gap-6 animate-fade-in-up"
+            style={{ animationDelay: '200ms' }}
           >
             <ConnectButton label="Connect Discogs" />
             <Link
               href="/leaderboard"
-              className="inline-block px-6 py-3 rounded font-semibold border border-white/30 text-white hover:bg-white/10 transition-colors"
+              className="text-white/40 hover:text-white transition-colors text-sm font-medium tracking-widest uppercase"
             >
-              Browse Leaderboard
+              Browse Leaderboard →
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Feature cards */}
-      <div className="py-16 max-w-4xl mx-auto px-4">
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      {/* Feature grid — editorial separator style */}
+      <div className="max-w-6xl mx-auto px-8 sm:px-16 py-24">
+        <p className="text-white/25 text-xs uppercase tracking-widest mb-12">What you can do</p>
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-white/10">
           {features.map(({ href, title, description, delay }) => (
             <Link
               key={href}
               href={href}
-              className="block bg-minimal-gray-100 border border-minimal-gray-200 rounded-xl p-6 hover:-translate-y-1 hover:border-minimal-gray-300 transition-all duration-300 group animate-fade-in-up"
+              className="block bg-black p-8 hover:bg-[#0a0a0a] transition-colors group animate-fade-in-up"
               style={{ animationDelay: delay }}
             >
-              <h3 className="text-lg font-syne font-bold mb-2 text-amber-400 transition-colors">
+              <h3 className="text-white font-syne font-bold text-xl mb-3 group-hover:text-[#00e5ff] transition-colors">
                 {title}
               </h3>
-              <p className="text-sm text-minimal-gray-500 leading-relaxed">{description}</p>
-              <span className="inline-block mt-3 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-sm font-medium">
+              <p className="text-white/40 text-sm leading-relaxed">{description}</p>
+              <span className="inline-block mt-6 text-[#00e5ff] text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                 →
               </span>
             </Link>
