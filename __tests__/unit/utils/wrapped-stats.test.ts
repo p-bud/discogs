@@ -3,7 +3,7 @@
  * Pure function — no mocks needed.
  */
 import { describe, it, expect } from 'vitest';
-import { computeWrappedStats } from '@/app/utils/wrapped-stats';
+import { computeWrappedStats, deriveYears } from '@/app/utils/wrapped-stats';
 import { CollectionItem } from '@/app/models/types';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -205,5 +205,70 @@ describe('computeWrappedStats', () => {
     expect(stats.rarestAddition?.id).toBe('solo');
     expect(stats.mostCommonAddition?.id).toBe('solo');
     expect(stats.avgRarityThisYear).toBeCloseTo(3.5);
+  });
+});
+
+// ── deriveYears ───────────────────────────────────────────────────────────────
+
+describe('deriveYears', () => {
+  const CUTOFF = new Date().getFullYear() - 1; // e.g. 2025
+
+  function item(dateAdded: string | null): CollectionItem {
+    return makeItem({ dateAdded });
+  }
+
+  it('empty collection → empty array', () => {
+    expect(deriveYears([])).toEqual([]);
+  });
+
+  it('all null dateAdded → empty array', () => {
+    expect(deriveYears([item(null), item(null)])).toEqual([]);
+  });
+
+  it('returns years sorted newest-first', () => {
+    // Use mid-year noon UTC dates to avoid local-timezone boundary issues
+    const items = [
+      item(`${CUTOFF - 2}-06-15T12:00:00Z`),
+      item(`${CUTOFF}-06-15T12:00:00Z`),
+      item(`${CUTOFF - 1}-06-15T12:00:00Z`),
+    ];
+    expect(deriveYears(items)).toEqual([CUTOFF, CUTOFF - 1, CUTOFF - 2]);
+  });
+
+  it('deduplicates years', () => {
+    // Use mid-year noon UTC dates to avoid local-timezone boundary issues
+    const items = [
+      item(`${CUTOFF}-03-15T12:00:00Z`),
+      item(`${CUTOFF}-06-30T12:00:00Z`),
+      item(`${CUTOFF}-09-01T12:00:00Z`),
+    ];
+    expect(deriveYears(items)).toEqual([CUTOFF]);
+  });
+
+  it('excludes years older than 5 years back from cutoff', () => {
+    const tooOld = CUTOFF - 5;
+    const items = [
+      item(`${tooOld}-06-15T12:00:00Z`),
+      item(`${CUTOFF - 4}-06-15T12:00:00Z`), // exactly 4 years back — included
+    ];
+    const years = deriveYears(items);
+    expect(years).not.toContain(tooOld);
+    expect(years).toContain(CUTOFF - 4);
+  });
+
+  it('excludes the current year (only up to cutoff = currentYear - 1)', () => {
+    const currentYear = new Date().getFullYear();
+    // Use June so no timezone boundary can shift it to the previous year
+    const items = [item(`${currentYear}-06-15T12:00:00Z`)];
+    expect(deriveYears(items)).toEqual([]);
+  });
+
+  it('handles mixed valid/null dateAdded', () => {
+    const items = [
+      item(null),
+      item(`${CUTOFF}-03-01T00:00:00Z`),
+      item(null),
+    ];
+    expect(deriveYears(items)).toEqual([CUTOFF]);
   });
 });

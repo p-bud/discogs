@@ -1,6 +1,26 @@
 import { CollectionItem, WrappedStats } from '../models/types';
 
 /**
+ * Returns distinct years present in the collection within the last 5 years,
+ * capped at (current year - 1), sorted newest-first.
+ * Pure function — no React, no I/O.
+ */
+export function deriveYears(items: CollectionItem[]): number[] {
+  const cutoff = new Date().getFullYear() - 1;
+  const years = new Set<number>();
+  for (const item of items) {
+    if (!item.dateAdded) continue;
+    try {
+      const y = new Date(item.dateAdded).getFullYear();
+      if (y >= cutoff - 4 && y <= cutoff) years.add(y);
+    } catch {
+      // ignore invalid dates
+    }
+  }
+  return Array.from(years).sort((a, b) => b - a);
+}
+
+/**
  * Pure function — no React, no I/O.
  * Computes Wrapped stats for a given target year from the full collection.
  */
