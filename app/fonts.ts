@@ -1,4 +1,5 @@
-import { Inter, JetBrains_Mono, Source_Sans_3 } from 'next/font/google';
+import { Inter, JetBrains_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 
 // Define your Inter font
 export const inter = Inter({
@@ -16,10 +17,23 @@ export const jetbrainsMono = JetBrains_Mono({
   weight: ['400', '500'],
 });
 
-// Source Sans Pro (Google Fonts: Source Sans 3) — utility.agency
-export const sourceSans = Source_Sans_3({
-  subsets: ['latin'],
+// Alliance No. 2 — display typeface (utility.agency)
+// Files needed in /public/fonts/:
+//   AllianceNo2-Bold.woff2        (700)
+//   AllianceNo2-ExtraBold.woff2   (800)
+export const alliance = localFont({
+  src: [
+    {
+      path: '../public/fonts/AllianceNo2-Bold.woff2',
+      weight: '700',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/AllianceNo2-ExtraBold.woff2',
+      weight: '800',
+      style: 'normal',
+    },
+  ],
+  variable: '--font-alliance',
   display: 'swap',
-  variable: '--font-source-sans',
-  weight: ['300', '400', '600', '700', '900'],
 });
