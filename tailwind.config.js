@@ -8,25 +8,25 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Clean, minimal color palette
+        // Dark palette — token remap
         minimal: {
-          black: '#121212',      // Near black for text
-          white: '#ffffff',      // Pure white
+          black: '#f0f0f8',      // Near-white text
+          white: '#0d0d14',      // Dark background
           gray: {
-            50: '#f9fafb',       // Lightest gray
-            100: '#f3f4f6',      // Very light gray
-            200: '#e5e7eb',      // Light gray
-            300: '#d1d5db',      // Medium light gray
-            400: '#9ca3af',      // Medium gray
-            500: '#6b7280',      // Medium dark gray
-            600: '#4b5563',      // Dark gray
-            700: '#374151',      // Very dark gray
-            800: '#1f2937',      // Near black
-            900: '#111827',      // Darkest gray
+            50:  '#111118',
+            100: '#1a1a28',
+            200: '#252538',
+            300: '#353550',
+            400: '#5a5a78',
+            500: '#8888a8',
+            600: '#a0a0c0',
+            700: '#c0c0d8',
+            800: '#dcdcec',
+            900: '#f0f0f8',
           },
-          accent: '#4f46e5',     // Indigo accent
-          'accent-light': '#818cf8', // Light accent
-          'accent-dark': '#3730a3', // Dark accent
+          accent: '#f59e0b',     // Amber accent
+          'accent-light': '#fbbf24',
+          'accent-dark': '#d97706',
           error: '#ef4444',      // Error red
           success: '#10b981',    // Success green
           warning: '#f59e0b',    // Warning yellow
@@ -72,8 +72,8 @@ module.exports = {
         'sans': ['var(--font-inter)', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         'mono': ['var(--font-jetbrains-mono)', 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', 'monospace'],
         'pixel': ['VT323', 'Courier New', 'monospace'],
-        // Add your custom font here when ready, using the variable name
         'picnic': ['var(--font-picnic)', 'sans-serif'],
+        'syne': ['var(--font-syne)', 'sans-serif'],
       },
       borderRadius: {
         'sm': '0.125rem',

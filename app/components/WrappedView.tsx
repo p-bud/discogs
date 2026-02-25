@@ -2,7 +2,7 @@ import React from 'react';
 import Image from 'next/image';
 import { CollectionItem, WrappedStats } from '../models/types';
 
-const ACCENT = '#4f46e5';
+const ACCENT = '#f59e0b';
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
@@ -103,11 +103,11 @@ export default function WrappedView({
 
       {/* Partial-data full banner */}
       {showFullBanner && onRefresh && (
-        <div className="border border-amber-300 bg-amber-50 rounded-lg p-5 text-center">
-          <p className="font-semibold text-amber-800 mb-2">
+        <div className="border border-amber-700/60 bg-amber-950/40 rounded-lg p-5 text-center">
+          <p className="font-semibold text-amber-300 mb-2">
             Your collection was cached before Wrapped launched.
           </p>
-          <p className="text-amber-700 text-sm mb-4">
+          <p className="text-amber-400/80 text-sm mb-4">
             Refresh to generate your {year} stats.
           </p>
           <button
@@ -229,8 +229,8 @@ export default function WrappedView({
 
       {/* Footer note for partial data */}
       {showFooterNote && onRefresh && (
-        <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 flex items-center justify-between gap-4">
-          <p className="text-amber-700 text-sm">
+        <div className="border border-amber-700/60 bg-amber-950/40 rounded-lg p-4 flex items-center justify-between gap-4">
+          <p className="text-amber-300 text-sm">
             Some older items are missing date data. Refresh for complete stats.
           </p>
           <button

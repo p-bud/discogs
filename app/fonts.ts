@@ -1,4 +1,4 @@
-import { Inter, JetBrains_Mono } from 'next/font/google';
+import { Inter, JetBrains_Mono, Syne } from 'next/font/google';
 import localFont from 'next/font/local';
 
 // Define your Inter font
@@ -15,6 +15,14 @@ export const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
   variable: '--font-jetbrains-mono',
   weight: ['400', '500'],
+});
+
+// Syne display typeface
+export const syne = Syne({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-syne',
+  weight: ['700', '800'],
 });
 
 // PicNic custom font

@@ -9,13 +9,13 @@
     @apply bg-minimal-white text-minimal-black font-sans;
   }
   h1 {
-    @apply text-3xl font-sans font-bold mb-4 text-minimal-black;
+    @apply text-3xl font-syne font-bold mb-4 text-minimal-black;
   }
   h2 {
-    @apply text-2xl font-sans font-semibold mb-3 text-minimal-black;
+    @apply text-2xl font-syne font-bold mb-3 text-minimal-black;
   }
   h3 {
-    @apply text-xl font-sans font-medium mb-2 text-minimal-black;
+    @apply text-xl font-syne font-bold mb-2 text-minimal-black;
   }
 }
 
@@ -30,7 +30,7 @@
     @apply bg-minimal-gray-200 text-minimal-gray-800 hover:bg-minimal-gray-300;
   }
   .card {
-    @apply bg-minimal-white border border-minimal-gray-200 rounded-lg p-4 shadow;
+    @apply bg-minimal-gray-100 border border-minimal-gray-200 rounded-lg p-4;
   }
   .input {
     @apply w-full p-2 bg-minimal-white border border-minimal-gray-300 rounded text-minimal-black font-sans focus:outline-none focus:ring-2 focus:ring-minimal-accent focus:border-minimal-accent;
@@ -91,6 +91,10 @@
   .retro-waveform {
     @apply bg-retro-black p-2 border-2 border-retro-blue-light;
   }
+}
+
+::placeholder {
+  @apply text-minimal-gray-400;
 }
 
 /* Hero dot-grid background pattern */
