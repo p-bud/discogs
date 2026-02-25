@@ -1,5 +1,4 @@
-import { Inter, JetBrains_Mono, Syne } from 'next/font/google';
-import localFont from 'next/font/local';
+import { Inter, JetBrains_Mono, Source_Sans_3 } from 'next/font/google';
 
 // Define your Inter font
 export const inter = Inter({
@@ -17,43 +16,10 @@ export const jetbrainsMono = JetBrains_Mono({
   weight: ['400', '500'],
 });
 
-// Syne display typeface
-export const syne = Syne({
+// Source Sans Pro (Google Fonts: Source Sans 3) — utility.agency
+export const sourceSans = Source_Sans_3({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-syne',
-  weight: ['700', '800'],
+  variable: '--font-source-sans',
+  weight: ['300', '400', '600', '700', '900'],
 });
-
-// PicNic custom font
-export const picnic = localFont({
-  src: [
-    {
-      path: '../public/fonts/PicNic.woff',
-      weight: '400',
-      style: 'normal',
-    },
-  ],
-  variable: '--font-picnic',
-  display: 'swap',
-});
-
-// Example of using a local font (uncomment and replace paths when you have your font files)
-/*
-export const customFont = localFont({
-  src: [
-    {
-      path: '../public/fonts/YourFont-Regular.woff2',
-      weight: '400',
-      style: 'normal',
-    },
-    {
-      path: '../public/fonts/YourFont-Bold.woff2',
-      weight: '700',
-      style: 'normal',
-    },
-  ],
-  variable: '--font-custom',
-  display: 'swap',
-});
-*/ 

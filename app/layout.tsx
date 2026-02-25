@@ -1,6 +1,6 @@
 import React from 'react';
 import './styles/globals.css';
-import { inter, jetbrainsMono, picnic, syne } from './fonts';
+import { inter, jetbrainsMono, sourceSans } from './fonts';
 
 export const metadata = {
   title: 'Raerz',
@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${picnic.variable} ${syne.variable}`}>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${sourceSans.variable}`}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />

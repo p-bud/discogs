@@ -72,8 +72,8 @@ module.exports = {
         'sans': ['var(--font-inter)', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         'mono': ['var(--font-jetbrains-mono)', 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', 'monospace'],
         'pixel': ['VT323', 'Courier New', 'monospace'],
-        'picnic': ['var(--font-picnic)', 'sans-serif'],
-        'syne': ['var(--font-syne)', 'sans-serif'],
+        'picnic': ['var(--font-source-sans)', 'sans-serif'],
+        'syne': ['var(--font-source-sans)', 'sans-serif'],
       },
       borderRadius: {
         'sm': '0.125rem',
