@@ -219,7 +219,7 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
     <div className="space-y-6">
 
       {/* Title + controls */}
-      <div className="text-center pt-4">
+      <div className="text-center pt-4 animate-fade-in-up">
         <h1 className="text-4xl sm:text-5xl font-picnic text-minimal-black uppercase tracking-tight">
           Your {year} in Records
         </h1>
@@ -231,10 +231,10 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
               key={y}
               onClick={() => setYear(y)}
               className={
-                'px-4 py-1.5 rounded-full text-sm font-semibold border transition-colors ' +
+                'px-4 py-1.5 rounded-full text-sm font-semibold border transition-all duration-200 ' +
                 (y === year
                   ? 'text-white border-transparent'
-                  : 'text-minimal-gray-700 border-minimal-gray-300 hover:border-minimal-gray-500')
+                  : 'text-minimal-gray-700 border-minimal-gray-300 hover:border-minimal-gray-500 hover:scale-105')
               }
               style={y === year ? { backgroundColor: ACCENT, borderColor: ACCENT } : {}}
             >
@@ -247,7 +247,7 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
         <div className="mt-4">
           <button
             onClick={handleShare}
-            className="text-sm text-minimal-gray-500 hover:text-minimal-gray-700 underline underline-offset-2 transition-colors"
+            className="px-3 py-1 rounded-full border border-minimal-gray-200 text-xs text-minimal-gray-500 hover:border-minimal-gray-400 hover:text-minimal-gray-700 transition-all"
           >
             {copied ? '✓ Copied!' : 'Share'}
           </button>

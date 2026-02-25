@@ -122,7 +122,7 @@ export default function WrappedView({
       )}
 
       {/* Hero card */}
-      <div className="rounded-2xl p-8 text-center text-white" style={{ backgroundColor: ACCENT }}>
+      <div className="rounded-2xl p-8 text-center text-white animate-fade-in" style={{ backgroundColor: ACCENT }}>
         <p className="text-7xl sm:text-8xl font-picnic font-bold leading-none">{totalAdded}</p>
         <p className="text-xl mt-3 opacity-90">
           record{totalAdded !== 1 ? 's' : ''} added in {year}
@@ -131,7 +131,7 @@ export default function WrappedView({
 
       {/* Top Genres */}
       {genreBreakdown.length > 0 && (
-        <section>
+        <section className="animate-fade-in-up" style={{ animationDelay: '75ms' }}>
           <h2 className="text-xl font-picnic text-minimal-black mb-4">Top Genres</h2>
           <BarChart rows={genreBreakdown} labelKey="genre" countKey="count" max={maxGenre} />
         </section>
@@ -139,7 +139,7 @@ export default function WrappedView({
 
       {/* Top Formats */}
       {formatBreakdown.length > 0 && (
-        <section>
+        <section className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
           <h2 className="text-xl font-picnic text-minimal-black mb-4">Top Formats</h2>
           <BarChart rows={formatBreakdown} labelKey="format" countKey="count" max={maxFormat} />
         </section>
@@ -147,7 +147,7 @@ export default function WrappedView({
 
       {/* By Decade */}
       {decadeBreakdown.length > 0 && (
-        <section>
+        <section className="animate-fade-in-up" style={{ animationDelay: '225ms' }}>
           <h2 className="text-xl font-picnic text-minimal-black mb-4">By Decade</h2>
           <BarChart rows={decadeBreakdown} labelKey="decade" countKey="count" max={maxDecade} />
         </section>
@@ -155,7 +155,7 @@ export default function WrappedView({
 
       {/* Top Styles */}
       {styleBreakdown.length > 0 && (
-        <section>
+        <section className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
           <h2 className="text-xl font-picnic text-minimal-black mb-4">Top Styles</h2>
           <BarChart rows={styleBreakdown} labelKey="style" countKey="count" max={maxStyle} />
         </section>
@@ -163,7 +163,7 @@ export default function WrappedView({
 
       {/* Rarest record added this year */}
       {rarestAddition ? (
-        <section>
+        <section className="animate-fade-in-up" style={{ animationDelay: '375ms' }}>
           <h2 className="text-xl font-picnic text-minimal-black mb-4">
             Rarest Record Added in {year}
           </h2>

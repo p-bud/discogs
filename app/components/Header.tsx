@@ -21,7 +21,7 @@ const Header: React.FC = () => {
       : 'text-minimal-gray-700 hover:text-minimal-accent hover:bg-minimal-gray-50');
 
   return (
-    <header className="mb-6 bg-minimal-white shadow-sm">
+    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-minimal-gray-100 mb-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="py-6 flex flex-col items-center sm:flex-row sm:justify-between">
           <div className="text-center sm:text-left">
