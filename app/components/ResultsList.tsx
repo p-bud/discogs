@@ -151,7 +151,7 @@ const ResultsList: React.FC<ResultsListProps> = ({
                         <span className="font-medium text-minimal-gray-700">Collectors:</span>
                         <div className="mt-1">
                           {listing.haveCount === 0 ? (
-                            <span className="text-purple-600 font-medium">No collectors yet!</span>
+                            <span className="text-white font-medium">No collectors yet!</span>
                           ) : listing.haveCount && listing.haveCount < 10 ? (
                             <span className="text-blue-600 font-medium">Only {listing.haveCount} collectors</span>
                           ) : (

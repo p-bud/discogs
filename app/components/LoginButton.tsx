@@ -133,29 +133,29 @@ const LoginButton: React.FC<LoginButtonProps> = ({ className = '' }) => {
         </button>
 
         {showMenu && (
-          <div className="absolute right-0 mt-1 w-52 bg-white border border-minimal-gray-200 rounded-lg shadow-lg z-10 py-1 text-sm">
-            <div className="px-4 py-2 border-b border-minimal-gray-100">
-              <p className="font-medium text-minimal-gray-800 truncate">{supabaseEmail}</p>
-              <p className="text-minimal-gray-500 text-xs truncate">Discogs: {discogsUsername}</p>
+          <div className="absolute right-0 mt-1 w-52 bg-[#0a0a0a] border border-white/10 rounded-lg shadow-lg z-10 py-1 text-sm">
+            <div className="px-4 py-2 border-b border-white/10">
+              <p className="font-medium text-white truncate">{supabaseEmail}</p>
+              <p className="text-white/40 text-xs truncate">Discogs: {discogsUsername}</p>
             </div>
             <Link
               href="/account"
               onClick={() => setShowMenu(false)}
-              className="block w-full px-4 py-2 hover:bg-minimal-gray-50 text-minimal-gray-700"
+              className="block w-full px-4 py-2 hover:bg-white/5 text-white/60 hover:text-white"
             >
               Account settings
             </Link>
             <button
               onClick={initiateDiscogsLogout}
               disabled={loading}
-              className="w-full text-left px-4 py-2 hover:bg-minimal-gray-50 text-minimal-gray-700"
+              className="w-full text-left px-4 py-2 hover:bg-white/5 text-white/60 hover:text-white"
             >
               Disconnect Discogs
             </button>
             <button
               onClick={initiateSupabaseSignOut}
               disabled={loading}
-              className="w-full text-left px-4 py-2 hover:bg-minimal-gray-50 text-minimal-gray-700"
+              className="w-full text-left px-4 py-2 hover:bg-white/5 text-white/60 hover:text-white"
             >
               Sign out
             </button>

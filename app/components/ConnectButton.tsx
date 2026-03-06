@@ -3,8 +3,6 @@
 import React, { useState } from 'react';
 import { handleDiscogsAuth } from '../utils/discogs-client';
 
-const ACCENT = '#4f46e5';
-
 interface ConnectButtonProps {
   className?: string;
   label?: string;
@@ -29,8 +27,7 @@ export default function ConnectButton({
     <button
       onClick={handleClick}
       disabled={loading}
-      className={`inline-block px-6 py-3 rounded text-white font-semibold disabled:opacity-60 transition-opacity ${className}`}
-      style={{ backgroundColor: ACCENT }}
+      className={`btn-primary inline-block px-6 py-3 rounded font-semibold disabled:opacity-60 transition-opacity ${className}`}
     >
       {loading ? 'Connecting…' : label}
     </button>
