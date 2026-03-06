@@ -180,7 +180,7 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
         <p className="text-minimal-gray-500 mb-6">Connect your Discogs account to see your Wrapped stats.</p>
         <button
           onClick={handleDiscogsAuth}
-          className="inline-block px-6 py-3 rounded text-white font-semibold"
+          className="inline-block px-6 py-3 rounded text-black font-semibold"
           style={{ backgroundColor: ACCENT }}
         >
           Connect Discogs
@@ -233,7 +233,7 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
               className={
                 'px-4 py-1.5 rounded-full text-sm font-semibold border transition-all duration-200 ' +
                 (y === year
-                  ? 'text-white border-transparent'
+                  ? 'text-black border-transparent'
                   : 'text-minimal-gray-700 border-minimal-gray-300 hover:border-minimal-gray-500 hover:scale-105')
               }
               style={y === year ? { backgroundColor: ACCENT, borderColor: ACCENT } : {}}
