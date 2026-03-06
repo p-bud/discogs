@@ -8,6 +8,7 @@ import { CollectionItem, CollectionStats } from '../models/types';
 import { calculateCollectionStats } from '../utils/client-collection';
 import AuthModal from './AuthModal';
 import { createSupabaseBrowserClient } from '../utils/supabase-browser';
+import { handleDiscogsAuth } from '../utils/discogs-client';
 
 function formatRelativeTime(isoString: string): string {
   const diffMs = Date.now() - new Date(isoString).getTime();
@@ -344,10 +345,16 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
 
     if (!canSubmit) {
       return (
-        <div className="mt-6 p-4 bg-[#0a0a0a] border border-white/10 rounded-lg">
-          <p className="text-sm text-white/50">
+        <div className="mt-6 p-4 bg-[#0a0a0a] border border-white/10 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <p className="text-sm text-white/50 flex-1">
             Connect your Discogs account to submit to the leaderboard.
           </p>
+          <button
+            onClick={handleDiscogsAuth}
+            className="btn-primary px-4 py-2 text-sm rounded-md whitespace-nowrap"
+          >
+            Connect Discogs
+          </button>
         </div>
       );
     }

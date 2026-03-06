@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 
 export interface LeaderboardEntry {
   discogs_username: string;
@@ -64,7 +65,10 @@ export default function LeaderboardTable({ entries, rank }: LeaderboardTableProp
   if (entries.length === 0) {
     return (
       <div className="text-center py-16 text-white/40">
-        No entries yet. Be the first to submit!
+        <p>No entries yet.</p>
+        <Link href="/collection" className="text-sm underline hover:text-white/60 mt-2 inline-block">
+          Analyze your collection to be first →
+        </Link>
       </div>
     );
   }

@@ -36,7 +36,9 @@ export default async function LeaderboardPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-picnic text-minimal-black mb-2">Leaderboard</h1>
         <p className="text-minimal-gray-600 text-sm">
-          Analyze your collection and submit to appear here. Rankings update every minute.
+          <Link href="/collection" className="underline hover:text-minimal-gray-800">
+            Analyze your collection
+          </Link>{' '}and submit to appear here. Rankings update every minute.
         </p>
         <p className="text-minimal-gray-500 text-xs mt-2">
           Only users who have opted in appear here. Display names are shown when set; otherwise Discogs usernames are shown.{' '}
