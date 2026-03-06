@@ -2,7 +2,7 @@ import React from 'react';
 import Image from 'next/image';
 import { CollectionItem, WrappedStats } from '../models/types';
 
-const ACCENT = '#00e5ff';
+const ACCENT = '#ffffff';
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 

@@ -24,9 +24,9 @@ module.exports = {
             800: '#e0e0e0',
             900: '#f5f5f5',
           },
-          accent: '#00e5ff',     // Tidal cyan
-          'accent-light': '#7fffff',
-          'accent-dark': '#00b0cc',
+          accent: '#ffffff',
+          'accent-light': '#f0f0f0',
+          'accent-dark': '#e0e0e0',
           error: '#ef4444',
           success: '#10b981',
           warning: '#f59e0b',

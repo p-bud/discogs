@@ -85,10 +85,10 @@ export default function LeaderboardTable({ entries, rank }: LeaderboardTableProp
         </thead>
         <tbody className="divide-y divide-white/5 bg-[#0a0a0a]">
           {entries.map((entry, i) => (
-            <tr key={entry.discogs_username} className={i < 3 ? 'bg-[#00e5ff]/5' : ''}>
+            <tr key={entry.discogs_username} className={i < 3 ? 'bg-white/5' : ''}>
               <td className="px-4 py-3 font-bold font-mono">
                 {i === 0 ? (
-                  <span className="text-[#00e5ff]">1</span>
+                  <span className="text-white">1</span>
                 ) : i === 1 ? (
                   <span className="text-white/70">2</span>
                 ) : i === 2 ? (
@@ -104,7 +104,7 @@ export default function LeaderboardTable({ entries, rank }: LeaderboardTableProp
                       href={`https://www.discogs.com/user/${encodeURIComponent(entry.discogs_username)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[#00e5ff] hover:underline font-medium"
+                      className="text-white hover:underline font-medium"
                     >
                       {entry.display_name}
                     </a>
@@ -116,7 +116,7 @@ export default function LeaderboardTable({ entries, rank }: LeaderboardTableProp
                     href={`https://www.discogs.com/user/${encodeURIComponent(entry.discogs_username)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#00e5ff] hover:underline font-medium"
+                    className="text-white hover:underline font-medium"
                   >
                     {entry.discogs_username}
                   </a>

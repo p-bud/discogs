@@ -17,7 +17,7 @@ const Header: React.FC = () => {
   const linkClass = (href: string) =>
     'block py-2 px-3 transition-colors duration-200 ' +
     (pathname === href || (href !== '/' && pathname.startsWith(href))
-      ? 'text-[#00e5ff] font-medium'
+      ? 'text-white font-medium'
       : 'text-white/40 hover:text-white');
 
   return (
@@ -26,7 +26,7 @@ const Header: React.FC = () => {
         <div className="py-6 flex flex-col items-center sm:flex-row sm:justify-between">
           <div className="text-center sm:text-left">
             <h1 className="text-2xl font-picnic text-white m-0">
-              <Link href="/" className="hover:text-[#00e5ff] transition-colors duration-200">
+              <Link href="/" className="hover:text-white transition-colors duration-200">
                 Raerz
               </Link>
             </h1>

@@ -61,11 +61,11 @@ export default function Home() {
               className="block bg-black p-8 hover:bg-[#0a0a0a] transition-colors group animate-fade-in-up"
               style={{ animationDelay: delay }}
             >
-              <h3 className="text-white font-syne font-bold text-xl mb-3 group-hover:text-[#00e5ff] transition-colors">
+              <h3 className="text-white font-syne font-bold text-xl mb-3 group-hover:text-white/60 transition-colors">
                 {title}
               </h3>
               <p className="text-white/40 text-sm leading-relaxed">{description}</p>
-              <span className="inline-block mt-6 text-[#00e5ff] text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <span className="inline-block mt-6 text-white/60 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                 →
               </span>
             </Link>

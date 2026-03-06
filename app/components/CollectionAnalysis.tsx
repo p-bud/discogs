@@ -266,31 +266,31 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
                   {activeTab === 'rarest' && (
                     <div className="flex justify-between text-sm font-bold">
                       <span>Rarity Score:</span>
-                      <span className="text-[#00e5ff]">{item.rarityScore.toFixed(2)}</span>
+                      <span className="text-white">{item.rarityScore.toFixed(2)}</span>
                     </div>
                   )}
                   {activeTab === 'fewestHaves' && (
                     <div className="flex justify-between text-sm font-bold">
                       <span>Scarcity:</span>
-                      <span className="text-[#00e5ff]">{item.haveCount} owners</span>
+                      <span className="text-white">{item.haveCount} owners</span>
                     </div>
                   )}
                   {activeTab === 'mostWanted' && (
                     <div className="flex justify-between text-sm font-bold">
                       <span>Demand:</span>
-                      <span className="text-[#00e5ff]">{item.wantCount} wants</span>
+                      <span className="text-white">{item.wantCount} wants</span>
                     </div>
                   )}
                   {activeTab === 'collectible' && (
                     <div className="flex justify-between text-sm font-bold">
                       <span>Collectible Score:</span>
-                      <span className="text-[#00e5ff]">{((item.haveCount * item.wantCount) / 1000).toFixed(1)}</span>
+                      <span className="text-white">{((item.haveCount * item.wantCount) / 1000).toFixed(1)}</span>
                     </div>
                   )}
                   {(activeTab === 'common' || activeTab === 'all') && (
                     <div className="flex justify-between text-sm font-bold">
                       <span>Rarity Score:</span>
-                      <span className="text-[#00e5ff]">{item.rarityScore.toFixed(2)}</span>
+                      <span className="text-white">{item.rarityScore.toFixed(2)}</span>
                     </div>
                   )}
                 </div>
@@ -304,7 +304,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
 
   const renderLoading = () => (
     <div className="text-center py-12">
-      <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#00e5ff] mb-4"></div>
+      <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mb-4"></div>
       <p className="mt-2 text-lg font-medium">{loadingMessage}</p>
       {error && <p className="mt-2 text-red-500 font-bold">{error}</p>}
     </div>
@@ -319,9 +319,9 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
 
     if (submitState === 'success') {
       return (
-        <div className="mt-6 p-4 bg-[#00e5ff]/10 border border-[#00e5ff]/30 rounded-lg flex items-center gap-3">
-          <span className="text-[#00e5ff] font-medium">Submitted to leaderboard!</span>
-          <a href="/leaderboard" className="text-[#00e5ff] underline text-sm">View leaderboard</a>
+        <div className="mt-6 p-4 bg-white/10 border border-white/30 rounded-lg flex items-center gap-3">
+          <span className="text-white font-medium">Submitted to leaderboard!</span>
+          <a href="/leaderboard" className="text-white underline text-sm">View leaderboard</a>
         </div>
       );
     }
@@ -487,7 +487,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
             <button
               onClick={() => fetchCollection()}
               disabled={loading || communityDataLoading}
-              className="bg-[#00e5ff] text-black px-4 py-2 rounded hover:bg-[#00b0cc] disabled:opacity-40"
+              className="bg-white text-black px-4 py-2 rounded hover:bg-white/90 disabled:opacity-40"
             >
               Analyze
             </button>
@@ -503,7 +503,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
             <button
               onClick={() => fetchCollection(username, true)}
               disabled={loading || communityDataLoading}
-              className="inline-flex items-center gap-1 text-xs text-[#00e5ff] hover:text-white/80 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1 text-xs text-white hover:text-white/80 disabled:opacity-50 disabled:cursor-not-allowed"
               title="Re-fetch collection from Discogs"
             >
               ↺ Refresh
@@ -551,15 +551,15 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
           )}
 
           {communityDataLoading && (
-            <div className="bg-[#00e5ff]/5 p-4 rounded-lg mb-6 border border-[#00e5ff]/20">
+            <div className="bg-white/5 p-4 rounded-lg mb-6 border border-white/10">
               <div className="flex items-center">
-                <div className="mr-3 inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-[#00e5ff]"></div>
-                <p className="text-sm text-[#00e5ff]">
+                <div className="mr-3 inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                <p className="text-sm text-white">
                   Loading rarity data for {Math.round(progress / 100 * collection.length)} of {collection.length} records…
                 </p>
               </div>
               <div className="w-full bg-white/10 rounded-full h-2.5 mt-2">
-                <div className="bg-[#00e5ff] h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+                <div className="bg-white h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
               </div>
             </div>
           )}
@@ -570,7 +570,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 text-sm font-medium ${activeTab === tab ? 'text-[#00e5ff] border-b-2 border-[#00e5ff]' : 'text-white/40 hover:text-white/70'}`}
+                  className={`px-4 py-2 text-sm font-medium ${activeTab === tab ? 'text-white border-b-2 border-white' : 'text-white/40 hover:text-white/70'}`}
                 >
                   {tab === 'rarest' ? 'Rarest Items'
                     : tab === 'fewestHaves' ? 'Fewest Haves'
