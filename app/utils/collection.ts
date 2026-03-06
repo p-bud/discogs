@@ -122,26 +122,13 @@ export async function getUserCollection(
 
     // Helper: fetch one page directly (bypasses serial rate-limiter queue so
     // multiple pages can be in-flight simultaneously).
+    // 429 retries are handled automatically by the axios response interceptor
+    // in discogs-http-client.ts (up to 3 retries with back-off).
     const fetchPage = async (pageNum: number): Promise<any> => {
-      try {
-        const r = await discogsClient.get(`/users/${username}/collection/folders/0/releases`, {
-          params: { sort: 'added', sort_order: 'desc', per_page: PER_PAGE, page: pageNum },
-        });
-        return r.data;
-      } catch (err: any) {
-        if (err.response?.status === 429) {
-          const retryAfter = Math.min(
-            parseInt(err.response.headers['retry-after'] ?? '5', 10) * 1000,
-            10_000,
-          );
-          await new Promise(r => setTimeout(r, retryAfter));
-          const r = await discogsClient.get(`/users/${username}/collection/folders/0/releases`, {
-            params: { sort: 'added', sort_order: 'desc', per_page: PER_PAGE, page: pageNum },
-          });
-          return r.data;
-        }
-        throw err;
-      }
+      const r = await discogsClient.get(`/users/${username}/collection/folders/0/releases`, {
+        params: { sort: 'added', sort_order: 'desc', per_page: PER_PAGE, page: pageNum },
+      });
+      return r.data;
     };
 
     // Page 1 through rate-limiter (proper retry/auth handling)
