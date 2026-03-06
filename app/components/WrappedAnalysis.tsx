@@ -20,6 +20,7 @@ interface WrappedPageCache {
 const wrappedPageCache = new Map<string, WrappedPageCache>();
 
 const STORAGE_KEY = (u: string, y: number) => `wrapped_v1_${u}_${y}`;
+const YEARS_KEY   = (u: string) => `wrapped_years_v1_${u}`;
 
 function readStorage(u: string, y: number): WrappedPageCache | null {
   try {
@@ -33,6 +34,15 @@ function writeStorage(u: string, y: number, data: WrappedPageCache): void {
 }
 function clearStorage(u: string, y: number): void {
   try { sessionStorage.removeItem(STORAGE_KEY(u, y)); } catch {}
+}
+function readYearsStorage(u: string): number[] | null {
+  try {
+    const raw = sessionStorage.getItem(YEARS_KEY(u));
+    return raw ? (JSON.parse(raw) as number[]) : null;
+  } catch { return null; }
+}
+function writeYearsStorage(u: string, years: number[]): void {
+  try { sessionStorage.setItem(YEARS_KEY(u), JSON.stringify(years)); } catch {}
 }
 
 const memKey = (u: string, y: number) => `${u}__${y}`;
@@ -54,14 +64,15 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
 
   // Raw collection — shared across year selections (no re-fetch needed)
   const [collection, setCollection] = useState<CollectionItem[]>([]);
+  const [storedYears, setStoredYears] = useState<number[]>([]);
   const {
     enrichedReleases,
     loading: enriching,
     completed: enrichmentDone,
   } = useReleaseDetails(collection);
 
-  // Derive available years from the fetched collection
-  const availableYears = deriveYears(collection);
+  // Derive available years: live collection when available, else restored from session cache
+  const availableYears = collection.length > 0 ? deriveYears(collection) : storedYears;
   const yearPills = availableYears.length > 0 ? availableYears : [DEFAULT_YEAR];
 
   // Re-compute stats once enrichment finishes (picks up rarity scores)
@@ -124,6 +135,9 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
 
       setWrappedStats(computeWrappedStats(releases, year));
       setCollection(releases);
+      const years = deriveYears(releases);
+      setStoredYears(years);
+      if (username) writeYearsStorage(username, years);
     } catch (err: any) {
       setError(err.message || 'Failed to load collection');
     } finally {
@@ -134,6 +148,9 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
 
   useEffect(() => {
     if (!username) return;
+    // Restore available years (needed when stats come from cache and collection isn't fetched)
+    const cachedYears = readYearsStorage(username);
+    if (cachedYears) setStoredYears(cachedYears);
     // 1. In-memory (navigation)
     const mem = wrappedPageCache.get(memKey(username, year));
     if (mem) { setWrappedStats(mem.stats); setFromCache(mem.fromCache); return; }
