@@ -208,7 +208,7 @@ export async function getUserCollection(
       });
 
       try {
-        const writePromises: Promise<any>[] = [];
+        const writePromises: PromiseLike<any>[] = [];
         for (let i = 0; i < uniqueItems.length; i += BATCH_SIZE) {
           const batch = uniqueItems.slice(i, i + BATCH_SIZE).map(item => ({
             discogs_username: username,
