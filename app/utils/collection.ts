@@ -117,26 +117,50 @@ export async function getUserCollection(
 
     console.log(`Fetching full collection for ${username} (up to ${MAX_PAGES * PER_PAGE} items)`);
 
-    let page = 1;
-    let totalPages = 1;
     const allReleases: any[] = [];
     const startTime = Date.now();
 
-    do {
-      const response = await rateLimit(() =>
-        discogsClient.get(`/users/${username}/collection/folders/0/releases`, {
-          params: { sort: 'added', sort_order: 'desc', per_page: PER_PAGE, page },
-        })
-      );
-      const data = response.data;
-      allReleases.push(...(data.releases ?? []));
-      totalPages = data.pagination?.pages ?? 1;
-      page++;
-    } while (
+    // Helper: fetch one page directly (bypasses serial rate-limiter queue so
+    // multiple pages can be in-flight simultaneously).
+    // 429 retries are handled automatically by the axios response interceptor
+    // in discogs-http-client.ts (up to 3 retries with back-off).
+    const fetchPage = async (pageNum: number): Promise<any> => {
+      const r = await discogsClient.get(`/users/${username}/collection/folders/0/releases`, {
+        params: { sort: 'added', sort_order: 'desc', per_page: PER_PAGE, page: pageNum },
+      });
+      return r.data;
+    };
+
+    // Page 1 through rate-limiter (proper retry/auth handling)
+    const firstData = await rateLimit(() =>
+      discogsClient.get(`/users/${username}/collection/folders/0/releases`, {
+        params: { sort: 'added', sort_order: 'desc', per_page: PER_PAGE, page: 1 },
+      }),
+    );
+    allReleases.push(...(firstData.data.releases ?? []));
+    const totalPages = firstData.data.pagination?.pages ?? 1;
+
+    // Remaining pages — fetch 3 at a time in parallel
+    const PARALLEL_PAGES = 3;
+    let page = 2;
+    while (
       page <= totalPages &&
       page <= MAX_PAGES &&
       Date.now() - startTime < TIME_BUDGET_MS
-    );
+    ) {
+      const batch: Promise<any>[] = [];
+      for (let j = 0; j < PARALLEL_PAGES && page <= totalPages && page <= MAX_PAGES; j++, page++) {
+        batch.push(fetchPage(page));
+      }
+      const results = await Promise.all(batch);
+      for (const data of results) {
+        allReleases.push(...(data.releases ?? []));
+      }
+      // Brief pause between parallel batches to stay well within rate limits
+      if (page <= totalPages && page <= MAX_PAGES && Date.now() - startTime < TIME_BUDGET_MS) {
+        await new Promise(r => setTimeout(r, 150));
+      }
+    }
 
     const hitPageCap = page <= totalPages;
 
@@ -171,6 +195,7 @@ export async function getUserCollection(
       });
 
       try {
+        const writePromises: PromiseLike<any>[] = [];
         for (let i = 0; i < uniqueItems.length; i += BATCH_SIZE) {
           const batch = uniqueItems.slice(i, i + BATCH_SIZE).map(item => ({
             discogs_username: username,
@@ -185,16 +210,16 @@ export async function getUserCollection(
             genres:     item.genres ?? [],
             styles:     item.styles ?? [],
           }));
-
-          const { error } = await supabase
-            .from('user_collection_cache')
-            .upsert(batch, { onConflict: 'discogs_username,release_id' });
-
-          if (error) {
-            console.warn('Supabase collection upsert error:', error);
-            break;
-          }
+          writePromises.push(
+            supabase
+              .from('user_collection_cache')
+              .upsert(batch, { onConflict: 'discogs_username,release_id' })
+              .then(({ error }) => {
+                if (error) console.warn('Supabase collection upsert error:', error);
+              }),
+          );
         }
+        await Promise.all(writePromises);
       } catch (err) {
         console.warn('Supabase collection cache write failed:', err);
       }

@@ -2,7 +2,7 @@ import React from 'react';
 import Image from 'next/image';
 import { CollectionItem, WrappedStats } from '../models/types';
 
-const ACCENT = '#4f46e5';
+const ACCENT = '#00e5ff';
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
@@ -103,11 +103,11 @@ export default function WrappedView({
 
       {/* Partial-data full banner */}
       {showFullBanner && onRefresh && (
-        <div className="border border-amber-300 bg-amber-50 rounded-lg p-5 text-center">
-          <p className="font-semibold text-amber-800 mb-2">
+        <div className="border border-white/15 bg-white/5 rounded-lg p-5 text-center">
+          <p className="font-semibold text-white mb-2">
             Your collection was cached before Wrapped launched.
           </p>
-          <p className="text-amber-700 text-sm mb-4">
+          <p className="text-white/50 text-sm mb-4">
             Refresh to generate your {year} stats.
           </p>
           <button
@@ -122,16 +122,16 @@ export default function WrappedView({
       )}
 
       {/* Hero card */}
-      <div className="rounded-2xl p-8 text-center text-white" style={{ backgroundColor: ACCENT }}>
-        <p className="text-7xl sm:text-8xl font-picnic font-bold leading-none">{totalAdded}</p>
-        <p className="text-xl mt-3 opacity-90">
+      <div className="border border-white/10 p-12 text-center animate-fade-in">
+        <p className="text-8xl sm:text-9xl font-syne font-bold leading-none" style={{ color: ACCENT }}>{totalAdded}</p>
+        <p className="text-lg mt-4 text-white/50 uppercase tracking-widest">
           record{totalAdded !== 1 ? 's' : ''} added in {year}
         </p>
       </div>
 
       {/* Top Genres */}
       {genreBreakdown.length > 0 && (
-        <section>
+        <section className="animate-fade-in-up" style={{ animationDelay: '75ms' }}>
           <h2 className="text-xl font-picnic text-minimal-black mb-4">Top Genres</h2>
           <BarChart rows={genreBreakdown} labelKey="genre" countKey="count" max={maxGenre} />
         </section>
@@ -139,7 +139,7 @@ export default function WrappedView({
 
       {/* Top Formats */}
       {formatBreakdown.length > 0 && (
-        <section>
+        <section className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
           <h2 className="text-xl font-picnic text-minimal-black mb-4">Top Formats</h2>
           <BarChart rows={formatBreakdown} labelKey="format" countKey="count" max={maxFormat} />
         </section>
@@ -147,7 +147,7 @@ export default function WrappedView({
 
       {/* By Decade */}
       {decadeBreakdown.length > 0 && (
-        <section>
+        <section className="animate-fade-in-up" style={{ animationDelay: '225ms' }}>
           <h2 className="text-xl font-picnic text-minimal-black mb-4">By Decade</h2>
           <BarChart rows={decadeBreakdown} labelKey="decade" countKey="count" max={maxDecade} />
         </section>
@@ -155,7 +155,7 @@ export default function WrappedView({
 
       {/* Top Styles */}
       {styleBreakdown.length > 0 && (
-        <section>
+        <section className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
           <h2 className="text-xl font-picnic text-minimal-black mb-4">Top Styles</h2>
           <BarChart rows={styleBreakdown} labelKey="style" countKey="count" max={maxStyle} />
         </section>
@@ -163,7 +163,7 @@ export default function WrappedView({
 
       {/* Rarest record added this year */}
       {rarestAddition ? (
-        <section>
+        <section className="animate-fade-in-up" style={{ animationDelay: '375ms' }}>
           <h2 className="text-xl font-picnic text-minimal-black mb-4">
             Rarest Record Added in {year}
           </h2>
@@ -229,8 +229,8 @@ export default function WrappedView({
 
       {/* Footer note for partial data */}
       {showFooterNote && onRefresh && (
-        <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 flex items-center justify-between gap-4">
-          <p className="text-amber-700 text-sm">
+        <div className="border border-white/15 bg-white/5 rounded-lg p-4 flex items-center justify-between gap-4">
+          <p className="text-white/50 text-sm">
             Some older items are missing date data. Refresh for complete stats.
           </p>
           <button

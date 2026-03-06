@@ -5,8 +5,6 @@ import { getSupabaseClient } from '@/app/utils/supabase';
 import { createSupabaseServerClient } from '@/app/utils/supabase-server';
 import { DiscogsOAuth } from '@/app/utils/auth';
 
-export const dynamic = 'force-dynamic';
-
 const RANK_COLUMNS = {
   avg_rarity: 'avg_rarity_score',
   rarest_item: 'rarest_item_score',
@@ -47,7 +45,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch leaderboard' }, { status: 500 });
   }
 
-  return NextResponse.json({ entries: data ?? [], rank: rankParam });
+  const response = NextResponse.json({ entries: data ?? [], rank: rankParam });
+  response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+  return response;
 }
 
 // --- POST /api/leaderboard (requires Supabase session) ---

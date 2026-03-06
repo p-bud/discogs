@@ -41,7 +41,7 @@ function scoreCell(entry: LeaderboardEntry, rank: RankKey) {
         <span>
           <span className="font-medium">{Number(entry.rarest_item_score).toFixed(4)}</span>
           {entry.rarest_item_title && (
-            <span className="block text-xs text-minimal-gray-500 truncate max-w-[200px]">
+            <span className="block text-xs text-white/40 truncate max-w-[200px]">
               {entry.rarest_item_artist} — {entry.rarest_item_title}
             </span>
           )}
@@ -63,31 +63,39 @@ function scoreHeader(rank: RankKey) {
 export default function LeaderboardTable({ entries, rank }: LeaderboardTableProps) {
   if (entries.length === 0) {
     return (
-      <div className="text-center py-16 text-minimal-gray-500">
+      <div className="text-center py-16 text-white/40">
         No entries yet. Be the first to submit!
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-minimal-gray-200">
-      <table className="min-w-full divide-y divide-minimal-gray-200 text-sm">
-        <thead className="bg-minimal-gray-50">
+    <div className="overflow-x-auto rounded-lg border border-white/10">
+      <table className="min-w-full divide-y divide-white/10 text-sm">
+        <thead className="bg-white/5">
           <tr>
-            <th className="px-4 py-3 text-left font-semibold text-minimal-gray-600 w-12">#</th>
-            <th className="px-4 py-3 text-left font-semibold text-minimal-gray-600">Username</th>
-            <th className="px-4 py-3 text-left font-semibold text-minimal-gray-600">{scoreHeader(rank)}</th>
+            <th className="px-4 py-3 text-left font-semibold text-white/50 w-12">#</th>
+            <th className="px-4 py-3 text-left font-semibold text-white/50">Username</th>
+            <th className="px-4 py-3 text-left font-semibold text-white/50">{scoreHeader(rank)}</th>
             {rank !== 'collection' && (
-              <th className="px-4 py-3 text-left font-semibold text-minimal-gray-600 hidden md:table-cell">Collection</th>
+              <th className="px-4 py-3 text-left font-semibold text-white/50 hidden md:table-cell">Collection</th>
             )}
-            <th className="px-4 py-3 text-left font-semibold text-minimal-gray-600 hidden sm:table-cell">Updated</th>
+            <th className="px-4 py-3 text-left font-semibold text-white/50 hidden sm:table-cell">Updated</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-minimal-gray-100 bg-white">
+        <tbody className="divide-y divide-white/5 bg-[#0a0a0a]">
           {entries.map((entry, i) => (
-            <tr key={entry.discogs_username} className={i < 3 ? 'bg-amber-50/40' : ''}>
-              <td className="px-4 py-3 font-bold text-minimal-gray-400">
-                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+            <tr key={entry.discogs_username} className={i < 3 ? 'bg-[#00e5ff]/5' : ''}>
+              <td className="px-4 py-3 font-bold font-mono">
+                {i === 0 ? (
+                  <span className="text-[#00e5ff]">1</span>
+                ) : i === 1 ? (
+                  <span className="text-white/70">2</span>
+                ) : i === 2 ? (
+                  <span className="text-white/50">3</span>
+                ) : (
+                  <span className="text-white/30">{i + 1}</span>
+                )}
               </td>
               <td className="px-4 py-3">
                 {entry.display_name ? (
@@ -96,33 +104,33 @@ export default function LeaderboardTable({ entries, rank }: LeaderboardTableProp
                       href={`https://www.discogs.com/user/${encodeURIComponent(entry.discogs_username)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-minimal-accent hover:underline font-medium"
+                      className="text-[#00e5ff] hover:underline font-medium"
                     >
                       {entry.display_name}
                     </a>
                   ) : (
-                    <span className="font-medium text-minimal-gray-800">{entry.display_name}</span>
+                    <span className="font-medium text-white">{entry.display_name}</span>
                   )
                 ) : (
                   <a
                     href={`https://www.discogs.com/user/${encodeURIComponent(entry.discogs_username)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-minimal-accent hover:underline font-medium"
+                    className="text-[#00e5ff] hover:underline font-medium"
                   >
                     {entry.discogs_username}
                   </a>
                 )}
               </td>
-              <td className="px-4 py-3 text-minimal-gray-800">
+              <td className="px-4 py-3 text-white">
                 {scoreCell(entry, rank)}
               </td>
               {rank !== 'collection' && (
-                <td className="px-4 py-3 text-minimal-gray-600 hidden md:table-cell">
+                <td className="px-4 py-3 text-white/50 hidden md:table-cell">
                   {entry.collection_size.toLocaleString()}
                 </td>
               )}
-              <td className="px-4 py-3 text-minimal-gray-400 hidden sm:table-cell">
+              <td className="px-4 py-3 text-white/30 hidden sm:table-cell">
                 {relativeTime(entry.analyzed_at)}
               </td>
             </tr>

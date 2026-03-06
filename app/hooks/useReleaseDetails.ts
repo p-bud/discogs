@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { CollectionItem } from '../models/types';
 
 // Hook to fetch community data for a batch of releases
-export function useReleaseDetails(releases: CollectionItem[], batchSize = 10) {
+export function useReleaseDetails(releases: CollectionItem[], batchSize = 15) {
   const [enrichedReleases, setEnrichedReleases] = useState<CollectionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [completed, setCompleted] = useState(false);

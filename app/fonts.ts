@@ -1,5 +1,4 @@
-import { Inter, JetBrains_Mono } from 'next/font/google';
-import localFont from 'next/font/local';
+import { Inter, JetBrains_Mono, Syne } from 'next/font/google';
 
 // Define your Inter font
 export const inter = Inter({
@@ -17,35 +16,10 @@ export const jetbrainsMono = JetBrains_Mono({
   weight: ['400', '500'],
 });
 
-// PicNic custom font
-export const picnic = localFont({
-  src: [
-    {
-      path: '../public/fonts/PicNic.woff',
-      weight: '400',
-      style: 'normal',
-    },
-  ],
-  variable: '--font-picnic',
+// Syne — display typeface used for font-syne and font-picnic utility classes
+export const alliance = Syne({
+  subsets: ['latin'],
   display: 'swap',
+  variable: '--font-alliance',
+  weight: ['700', '800'],
 });
-
-// Example of using a local font (uncomment and replace paths when you have your font files)
-/*
-export const customFont = localFont({
-  src: [
-    {
-      path: '../public/fonts/YourFont-Regular.woff2',
-      weight: '400',
-      style: 'normal',
-    },
-    {
-      path: '../public/fonts/YourFont-Bold.woff2',
-      weight: '700',
-      style: 'normal',
-    },
-  ],
-  variable: '--font-custom',
-  display: 'swap',
-});
-*/ 

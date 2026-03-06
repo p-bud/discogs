@@ -8,28 +8,28 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Clean, minimal color palette
+        // Tidal-inspired dark palette
         minimal: {
-          black: '#121212',      // Near black for text
-          white: '#ffffff',      // Pure white
+          black: '#ffffff',      // Pure white text
+          white: '#000000',      // Pure black background
           gray: {
-            50: '#f9fafb',       // Lightest gray
-            100: '#f3f4f6',      // Very light gray
-            200: '#e5e7eb',      // Light gray
-            300: '#d1d5db',      // Medium light gray
-            400: '#9ca3af',      // Medium gray
-            500: '#6b7280',      // Medium dark gray
-            600: '#4b5563',      // Dark gray
-            700: '#374151',      // Very dark gray
-            800: '#1f2937',      // Near black
-            900: '#111827',      // Darkest gray
+            50:  '#0a0a0a',
+            100: '#111111',
+            200: '#1c1c1c',
+            300: '#333333',
+            400: '#555555',
+            500: '#888888',
+            600: '#aaaaaa',
+            700: '#cccccc',
+            800: '#e0e0e0',
+            900: '#f5f5f5',
           },
-          accent: '#4f46e5',     // Indigo accent
-          'accent-light': '#818cf8', // Light accent
-          'accent-dark': '#3730a3', // Dark accent
-          error: '#ef4444',      // Error red
-          success: '#10b981',    // Success green
-          warning: '#f59e0b',    // Warning yellow
+          accent: '#00e5ff',     // Tidal cyan
+          'accent-light': '#7fffff',
+          'accent-dark': '#00b0cc',
+          error: '#ef4444',
+          success: '#10b981',
+          warning: '#f59e0b',
         },
         // Keep existing colors for backward compatibility
         retro: {
@@ -72,8 +72,8 @@ module.exports = {
         'sans': ['var(--font-inter)', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         'mono': ['var(--font-jetbrains-mono)', 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', 'monospace'],
         'pixel': ['VT323', 'Courier New', 'monospace'],
-        // Add your custom font here when ready, using the variable name
-        'picnic': ['var(--font-picnic)', 'sans-serif'],
+        'picnic': ['var(--font-alliance)', 'sans-serif'],
+        'syne': ['var(--font-alliance)', 'sans-serif'],
       },
       borderRadius: {
         'sm': '0.125rem',
@@ -88,6 +88,21 @@ module.exports = {
         DEFAULT: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
         'md': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
         'lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
+        'xl': '0 20px 25px -5px rgba(0,0,0,0.15), 0 8px 10px -6px rgba(0,0,0,0.1)',
+      },
+      keyframes: {
+        fadeInUp: {
+          from: { opacity: '0', transform: 'translateY(16px)' },
+          to:   { opacity: '1', transform: 'translateY(0)' },
+        },
+        fadeIn: {
+          from: { opacity: '0' },
+          to:   { opacity: '1' },
+        },
+      },
+      animation: {
+        'fade-in-up': 'fadeInUp 0.5s ease-out both',
+        'fade-in':    'fadeIn 0.3s ease-out both',
       },
     },
   },
