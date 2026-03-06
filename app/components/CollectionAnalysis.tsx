@@ -226,13 +226,13 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
 
   const renderCollectionItems = (items: CollectionItem[]) => {
     if (!items || items.length === 0) {
-      return <p className="text-gray-500 italic">No items found</p>;
+      return <p className="text-white/40 italic">No items found</p>;
     }
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item) => (
-          <div key={item.id} className="border rounded-lg overflow-hidden shadow-md bg-white">
+          <div key={item.id} className="bg-[#0a0a0a] border border-white/10 rounded-lg overflow-hidden">
             <div className="flex">
               <div className="w-1/3">
                 {item.coverImage ? (
@@ -244,15 +244,15 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
                     className="object-cover h-full"
                   />
                 ) : (
-                  <div className="bg-gray-200 h-full flex items-center justify-center">
-                    <span className="text-gray-500">No Image</span>
+                  <div className="bg-white/5 h-full flex items-center justify-center">
+                    <span className="text-white/40">No Image</span>
                   </div>
                 )}
               </div>
               <div className="w-2/3 p-4">
                 <h3 className="font-bold truncate">{item.title}</h3>
-                <p className="text-sm text-gray-700 truncate">{item.artist}</p>
-                <p className="text-sm text-gray-600">{item.year}</p>
+                <p className="text-sm text-white/60 truncate">{item.artist}</p>
+                <p className="text-sm text-white/40">{item.year}</p>
                 <div className="mt-2">
                   <div className="flex justify-between text-sm">
                     <span>Want:</span>
@@ -266,31 +266,31 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
                   {activeTab === 'rarest' && (
                     <div className="flex justify-between text-sm font-bold">
                       <span>Rarity Score:</span>
-                      <span className="text-indigo-600">{item.rarityScore.toFixed(2)}</span>
+                      <span className="text-[#00e5ff]">{item.rarityScore.toFixed(2)}</span>
                     </div>
                   )}
                   {activeTab === 'fewestHaves' && (
                     <div className="flex justify-between text-sm font-bold">
                       <span>Scarcity:</span>
-                      <span className="text-indigo-600">{item.haveCount} owners</span>
+                      <span className="text-[#00e5ff]">{item.haveCount} owners</span>
                     </div>
                   )}
                   {activeTab === 'mostWanted' && (
                     <div className="flex justify-between text-sm font-bold">
                       <span>Demand:</span>
-                      <span className="text-indigo-600">{item.wantCount} wants</span>
+                      <span className="text-[#00e5ff]">{item.wantCount} wants</span>
                     </div>
                   )}
                   {activeTab === 'collectible' && (
                     <div className="flex justify-between text-sm font-bold">
                       <span>Collectible Score:</span>
-                      <span className="text-indigo-600">{((item.haveCount * item.wantCount) / 1000).toFixed(1)}</span>
+                      <span className="text-[#00e5ff]">{((item.haveCount * item.wantCount) / 1000).toFixed(1)}</span>
                     </div>
                   )}
                   {(activeTab === 'common' || activeTab === 'all') && (
                     <div className="flex justify-between text-sm font-bold">
                       <span>Rarity Score:</span>
-                      <span className="text-indigo-600">{item.rarityScore.toFixed(2)}</span>
+                      <span className="text-[#00e5ff]">{item.rarityScore.toFixed(2)}</span>
                     </div>
                   )}
                 </div>
@@ -304,7 +304,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
 
   const renderLoading = () => (
     <div className="text-center py-12">
-      <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600 mb-4"></div>
+      <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#00e5ff] mb-4"></div>
       <p className="mt-2 text-lg font-medium">{loadingMessage}</p>
       {error && <p className="mt-2 text-red-500 font-bold">{error}</p>}
     </div>
@@ -319,17 +319,17 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
 
     if (submitState === 'success') {
       return (
-        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-          <span className="text-green-700 font-medium">Submitted to leaderboard!</span>
-          <a href="/leaderboard" className="text-green-600 underline text-sm">View leaderboard</a>
+        <div className="mt-6 p-4 bg-[#00e5ff]/10 border border-[#00e5ff]/30 rounded-lg flex items-center gap-3">
+          <span className="text-[#00e5ff] font-medium">Submitted to leaderboard!</span>
+          <a href="/leaderboard" className="text-[#00e5ff] underline text-sm">View leaderboard</a>
         </div>
       );
     }
 
     if (!supabaseUserId) {
       return (
-        <div className="mt-6 p-4 bg-minimal-gray-50 border border-minimal-gray-200 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <p className="text-sm text-minimal-gray-600 flex-1">
+        <div className="mt-6 p-4 bg-[#0a0a0a] border border-white/10 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <p className="text-sm text-white/50 flex-1">
             Create a free account to appear on the leaderboard.
           </p>
           <button
@@ -344,8 +344,8 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
 
     if (!canSubmit) {
       return (
-        <div className="mt-6 p-4 bg-minimal-gray-50 border border-minimal-gray-200 rounded-lg">
-          <p className="text-sm text-minimal-gray-600">
+        <div className="mt-6 p-4 bg-[#0a0a0a] border border-white/10 rounded-lg">
+          <p className="text-sm text-white/50">
             Connect your Discogs account to submit to the leaderboard.
           </p>
         </div>
@@ -355,9 +355,9 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
     // Consent gate: user hasn't opted in yet — show consent checkbox before submit.
     if (!leaderboardOptIn) {
       return (
-        <div className="mt-6 p-4 bg-minimal-gray-50 border border-minimal-gray-200 rounded-lg">
-          <p className="text-sm font-medium text-minimal-gray-800 mb-2">Submit your results to the leaderboard?</p>
-          <p className="text-xs text-minimal-gray-500 mb-3">
+        <div className="mt-6 p-4 bg-[#0a0a0a] border border-white/10 rounded-lg">
+          <p className="text-sm font-medium text-white mb-2">Submit your results to the leaderboard?</p>
+          <p className="text-xs text-white/40 mb-3">
             Avg rarity: {stats.averageRarityScore.toFixed(4)} · {collection.length} records
           </p>
           <label className="flex items-start gap-2 cursor-pointer mb-3">
@@ -367,7 +367,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
               onChange={e => setConsentChecked(e.target.checked)}
               className="mt-0.5 shrink-0"
             />
-            <span className="text-xs text-minimal-gray-700">
+            <span className="text-xs text-white/60">
               I agree that my display name (or Discogs username if none set), rarity scores, and collection size will be publicly visible on the leaderboard.
               You can opt out at any time in <a href="/account" className="underline">account settings</a>.
             </span>
@@ -387,10 +387,10 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
     }
 
     return (
-      <div className="mt-6 p-4 bg-minimal-gray-50 border border-minimal-gray-200 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-3">
+      <div className="mt-6 p-4 bg-[#0a0a0a] border border-white/10 rounded-lg flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <div className="flex-1">
-          <p className="text-sm font-medium text-minimal-gray-800">Submit your results to the leaderboard?</p>
-          <p className="text-xs text-minimal-gray-500 mt-0.5">
+          <p className="text-sm font-medium text-white">Submit your results to the leaderboard?</p>
+          <p className="text-xs text-white/40 mt-0.5">
             Avg rarity: {stats.averageRarityScore.toFixed(4)} · {collection.length} records
           </p>
           {submitState === 'error' && (
@@ -412,7 +412,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
+      <div className="bg-red-950/50 border border-red-500/30 text-red-400 px-4 py-3 rounded">
         <p className="font-medium">{error}</p>
         <p className="text-sm mt-2">
           Make sure you're logged in to Discogs and have entered a valid username.
@@ -432,7 +432,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
         <div className="mt-4 flex flex-col sm:flex-row gap-2">
           <button
             onClick={() => window.location.reload()}
-            className="bg-red-100 hover:bg-red-200 text-red-800 font-medium py-2 px-4 rounded"
+            className="bg-red-950/80 hover:bg-red-900/80 text-red-400 border border-red-500/30 font-medium py-2 px-4 rounded"
           >
             Try Again
           </button>
@@ -443,7 +443,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
                 setLoadingMessage('Checking cache for partial results...');
                 setTimeout(() => fetchCollection(), 2000);
               }}
-              className="bg-blue-100 hover:bg-blue-200 text-blue-800 font-medium py-2 px-4 rounded"
+              className="bg-white/5 hover:bg-white/10 text-white/60 border border-white/10 font-medium py-2 px-4 rounded"
             >
               Check for Cached Results
             </button>
@@ -456,7 +456,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
                 setLoadingMessage(`Waiting ${Math.round(waitTime / 1000)} seconds before retry to avoid timeout...`);
                 setTimeout(() => fetchCollection(), waitTime);
               }}
-              className="bg-green-100 hover:bg-green-200 text-green-800 font-medium py-2 px-4 rounded"
+              className="bg-white/5 hover:bg-white/10 text-white/60 border border-white/10 font-medium py-2 px-4 rounded"
             >
               Retry with Delay
             </button>
@@ -471,9 +471,9 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-4">Discogs Collection Analyzer</h1>
         {authInfo.discogsConnected && authInfo.discogsUsername ? (
-          <p className="text-minimal-gray-600 text-sm">
+          <p className="text-white/50 text-sm">
             Analyzing collection for{' '}
-            <span className="font-semibold text-minimal-black">{authInfo.discogsUsername}</span>
+            <span className="font-semibold text-white">{authInfo.discogsUsername}</span>
           </p>
         ) : (
           <div className="flex space-x-2">
@@ -482,12 +482,12 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter Discogs username"
-              className="border p-2 rounded flex-grow"
+              className="input flex-grow"
             />
             <button
               onClick={() => fetchCollection()}
               disabled={loading || communityDataLoading}
-              className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 disabled:bg-indigo-300"
+              className="bg-[#00e5ff] text-black px-4 py-2 rounded hover:bg-[#00b0cc] disabled:opacity-40"
             >
               Analyze
             </button>
@@ -495,7 +495,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
         )}
         {fromCache && cachedAt && (
           <div className="flex items-center gap-2 mt-2">
-            <span className="inline-flex items-center gap-1.5 text-xs text-minimal-gray-500 bg-minimal-gray-100 border border-minimal-gray-200 rounded-full px-3 py-1">
+            <span className="inline-flex items-center gap-1.5 text-xs text-white/40 bg-white/5 border border-white/10 rounded-full px-3 py-1">
               <span>Cached</span>
               <span>·</span>
               <span>synced {formatRelativeTime(cachedAt)}</span>
@@ -503,7 +503,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
             <button
               onClick={() => fetchCollection(username, true)}
               disabled={loading || communityDataLoading}
-              className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1 text-xs text-[#00e5ff] hover:text-white/80 disabled:opacity-50 disabled:cursor-not-allowed"
               title="Re-fetch collection from Discogs"
             >
               ↺ Refresh
@@ -515,7 +515,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
       {loading && renderLoading()}
 
       {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-8" role="alert">
+        <div className="bg-red-950/50 border-l-4 border-red-500/60 text-red-400 p-4 mb-8" role="alert">
           <p>{error}</p>
         </div>
       )}
@@ -524,7 +524,7 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
         <div className="mb-8">
           <div className="flex flex-wrap mb-4">
             <div className="w-full md:w-1/2 lg:w-1/3 p-2">
-              <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+              <div className="bg-[#0a0a0a] border border-white/10 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-2">Collection Stats</h3>
                 <p><span className="font-medium">Total Records:</span> {stats.totalReleases}</p>
                 <p><span className="font-medium">Average Rarity Score:</span> {stats.averageRarityScore.toFixed(2)}</p>
@@ -532,45 +532,45 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
             </div>
           </div>
 
-          <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100">
-            <h3 className="text-lg font-semibold mb-2 text-blue-800">How This Works</h3>
-            <p className="mb-2 text-sm text-blue-700">
+          <div className="bg-white/5 p-4 rounded-lg mb-6 border border-white/10">
+            <h3 className="text-lg font-semibold mb-2 text-white/60">How This Works</h3>
+            <p className="mb-2 text-sm text-white/60">
               We analyze your full collection. Rarity scores are calculated as the ratio of "wants" to "haves" in the Discogs community.
             </p>
-            <p className="text-sm text-blue-700">
+            <p className="text-sm text-white/60">
               Your collection list loads immediately; rarity data fills in progressively.
             </p>
           </div>
 
           {limitedResults && (
-            <div className="bg-yellow-50 p-4 rounded-lg mb-6 border border-yellow-100">
-              <p className="text-sm text-yellow-700">
+            <div className="bg-white/5 p-4 rounded-lg mb-6 border border-white/10">
+              <p className="text-sm text-white/50">
                 Your collection has over 2,000 records. Showing the most recent 2,000.
               </p>
             </div>
           )}
 
           {communityDataLoading && (
-            <div className="bg-indigo-50 p-4 rounded-lg mb-6 border border-indigo-100">
+            <div className="bg-[#00e5ff]/5 p-4 rounded-lg mb-6 border border-[#00e5ff]/20">
               <div className="flex items-center">
-                <div className="mr-3 inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-indigo-600"></div>
-                <p className="text-sm text-indigo-700">
+                <div className="mr-3 inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-[#00e5ff]"></div>
+                <p className="text-sm text-[#00e5ff]">
                   Loading rarity data for {Math.round(progress / 100 * collection.length)} of {collection.length} records…
                 </p>
               </div>
-              <div className="w-full bg-indigo-200 rounded-full h-2.5 mt-2">
-                <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+              <div className="w-full bg-white/10 rounded-full h-2.5 mt-2">
+                <div className="bg-[#00e5ff] h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
               </div>
             </div>
           )}
 
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="flex border-b">
+          <div className="bg-black border border-white/10 rounded-lg overflow-hidden">
+            <div className="flex border-b border-white/10">
               {['rarest', 'fewestHaves', 'mostWanted', 'collectible', 'common'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 text-sm font-medium ${activeTab === tab ? 'text-indigo-700 border-b-2 border-indigo-500' : 'text-gray-500 hover:text-gray-700'}`}
+                  className={`px-4 py-2 text-sm font-medium ${activeTab === tab ? 'text-[#00e5ff] border-b-2 border-[#00e5ff]' : 'text-white/40 hover:text-white/70'}`}
                 >
                   {tab === 'rarest' ? 'Rarest Items'
                     : tab === 'fewestHaves' ? 'Fewest Haves'
@@ -585,13 +585,13 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
               {activeTab === 'rarest' && stats && (
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Your Rarest Records (Highest Want/Have Ratio)</h3>
-                  <p className="text-sm text-gray-600 mb-3">Records with the highest ratio of wants to haves are typically the most sought after compared to availability.</p>
+                  <p className="text-sm text-white/40 mb-3">Records with the highest ratio of wants to haves are typically the most sought after compared to availability.</p>
                   {communityDataLoading && !completed ? (
-                    <p className="text-gray-500 italic py-4">Loading rarity data...</p>
+                    <p className="text-white/40 italic py-4">Loading rarity data...</p>
                   ) : stats.rarestItems?.length > 0 ? (
                     renderCollectionItems(stats.rarestItems)
                   ) : (
-                    <p className="text-gray-500 italic py-4">No rarity data available yet. Still loading...</p>
+                    <p className="text-white/40 italic py-4">No rarity data available yet. Still loading...</p>
                   )}
                 </div>
               )}
@@ -599,13 +599,13 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
               {activeTab === 'fewestHaves' && stats && (
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Your Least Common Records (Fewest Haves)</h3>
-                  <p className="text-sm text-gray-600 mb-3">The records that very few Discogs users have in their collections.</p>
+                  <p className="text-sm text-white/40 mb-3">The records that very few Discogs users have in their collections.</p>
                   {communityDataLoading && !completed ? (
-                    <p className="text-gray-500 italic py-4">Loading rarity data...</p>
+                    <p className="text-white/40 italic py-4">Loading rarity data...</p>
                   ) : stats.fewestHaves?.length > 0 ? (
                     renderCollectionItems(stats.fewestHaves)
                   ) : (
-                    <p className="text-gray-500 italic py-4">No have/want data available yet. Still loading...</p>
+                    <p className="text-white/40 italic py-4">No have/want data available yet. Still loading...</p>
                   )}
                 </div>
               )}
@@ -613,13 +613,13 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
               {activeTab === 'mostWanted' && stats && (
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Your Most Wanted Records</h3>
-                  <p className="text-sm text-gray-600 mb-3">The records that the most Discogs users have added to their wantlists.</p>
+                  <p className="text-sm text-white/40 mb-3">The records that the most Discogs users have added to their wantlists.</p>
                   {communityDataLoading && !completed ? (
-                    <p className="text-gray-500 italic py-4">Loading rarity data...</p>
+                    <p className="text-white/40 italic py-4">Loading rarity data...</p>
                   ) : stats.mostWanted?.length > 0 ? (
                     renderCollectionItems(stats.mostWanted)
                   ) : (
-                    <p className="text-gray-500 italic py-4">No have/want data available yet. Still loading...</p>
+                    <p className="text-white/40 italic py-4">No have/want data available yet. Still loading...</p>
                   )}
                 </div>
               )}
@@ -627,13 +627,13 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
               {activeTab === 'collectible' && stats && (
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Your Most Collectible Records</h3>
-                  <p className="text-sm text-gray-600 mb-3">Records that are widely collected but still in high demand.</p>
+                  <p className="text-sm text-white/40 mb-3">Records that are widely collected but still in high demand.</p>
                   {communityDataLoading && !completed ? (
-                    <p className="text-gray-500 italic py-4">Loading rarity data...</p>
+                    <p className="text-white/40 italic py-4">Loading rarity data...</p>
                   ) : stats.mostCollectible?.length > 0 ? (
                     renderCollectionItems(stats.mostCollectible)
                   ) : (
-                    <p className="text-gray-500 italic py-4">No have/want data available yet. Still loading...</p>
+                    <p className="text-white/40 italic py-4">No have/want data available yet. Still loading...</p>
                   )}
                 </div>
               )}
@@ -641,13 +641,13 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
               {activeTab === 'common' && stats && (
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Your Most Common Records</h3>
-                  <p className="text-sm text-gray-600 mb-3">Records with the lowest want/have ratio.</p>
+                  <p className="text-sm text-white/40 mb-3">Records with the lowest want/have ratio.</p>
                   {communityDataLoading && !completed ? (
-                    <p className="text-gray-500 italic py-4">Loading rarity data...</p>
+                    <p className="text-white/40 italic py-4">Loading rarity data...</p>
                   ) : stats.mostCommonItems?.length > 0 ? (
                     renderCollectionItems(stats.mostCommonItems)
                   ) : (
-                    <p className="text-gray-500 italic py-4">No have/want data available yet. Still loading...</p>
+                    <p className="text-white/40 italic py-4">No have/want data available yet. Still loading...</p>
                   )}
                 </div>
               )}

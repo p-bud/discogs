@@ -57,40 +57,6 @@
     @apply bg-minimal-accent bg-opacity-10 text-minimal-accent;
   }
   
-  /* Legacy retro styles kept for backward compatibility */
-  .retro-display {
-    @apply bg-retro-black border-2 border-retro-blue-light p-2 text-retro-green font-pixel;
-  }
-  .retro-header {
-    @apply bg-retro-blue border-b-2 border-retro-blue-dark flex justify-between items-center p-4;
-  }
-  .retro-footer {
-    @apply bg-retro-blue border-t-2 border-retro-blue-dark p-4 text-center;
-  }
-  .retro-tab {
-    @apply px-4 py-2 bg-retro-blue text-retro-white border-2 border-retro-blue-dark font-pixel uppercase;
-  }
-  .retro-tab-active {
-    @apply bg-retro-blue-dark text-retro-white;
-  }
-  .retro-control {
-    @apply flex items-center justify-between bg-retro-blue border-2 border-retro-blue-dark p-2;
-  }
-  .retro-control-label {
-    @apply font-pixel uppercase text-retro-white;
-  }
-  .retro-control-value {
-    @apply font-pixel bg-retro-white px-2 text-retro-black border border-retro-blue-dark;
-  }
-  .retro-button {
-    @apply px-2 py-1 bg-retro-blue border-2 border-retro-blue-dark font-pixel uppercase hover:bg-retro-blue-light;
-  }
-  .retro-button-highlight {
-    @apply px-2 py-1 bg-retro-orange border-2 border-retro-blue-dark font-pixel uppercase hover:bg-retro-yellow;
-  }
-  .retro-waveform {
-    @apply bg-retro-black p-2 border-2 border-retro-blue-light;
-  }
 }
 
 ::placeholder {
