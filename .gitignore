@@ -31,5 +31,8 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts 
+next-env.d.ts
 node_modules
+
+# git worktrees
+.worktrees
