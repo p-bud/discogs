@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Header from './components/Header';
-import ConnectButton from './components/ConnectButton';
+import HeroCTA from './components/HeroCTA';
 
 const steps = [
   {
@@ -60,18 +60,7 @@ export default function Home() {
             Connect your Discogs account to rank every record you own by rarity,
             explore your year in vinyl, and compete on the global leaderboard.
           </p>
-          <div
-            className="flex flex-wrap items-center gap-6 animate-fade-in-up"
-            style={{ animationDelay: '200ms' }}
-          >
-            <ConnectButton label="Connect Discogs" />
-            <Link
-              href="/leaderboard"
-              className="text-white/40 hover:text-white transition-colors text-sm font-medium tracking-widest uppercase"
-            >
-              Browse Leaderboard →
-            </Link>
-          </div>
+          <HeroCTA />
         </div>
       </section>
 
