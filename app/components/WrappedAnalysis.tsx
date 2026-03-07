@@ -178,7 +178,7 @@ export default function WrappedAnalysis({ username }: WrappedAnalysisProps) {
   const handleShare = async () => {
     if (!username) return;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://raerz.fyi';
-    const url = `${appUrl}/wrapped/${encodeURIComponent(username)}`;
+    const url = `${appUrl}/wrapped/${encodeURIComponent(username)}/${year}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);

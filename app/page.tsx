@@ -2,6 +2,37 @@ import React from 'react';
 import Link from 'next/link';
 import Header from './components/Header';
 import HeroCTA from './components/HeroCTA';
+import { getSupabaseClient } from './utils/supabase';
+
+export const revalidate = 120;
+
+async function getCommunityStats(): Promise<{ collections: number; records: number; topEntry: { username: string; displayName: string | null; score: number } | null }> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return { collections: 0, records: 0, topEntry: null };
+
+  const { data } = await supabase
+    .from('leaderboard_entries')
+    .select('discogs_username, display_name, avg_rarity_score, collection_size')
+    .eq('leaderboard_opt_in', true)
+    .order('avg_rarity_score', { ascending: false })
+    .limit(1);
+
+  const { count } = await supabase
+    .from('leaderboard_entries')
+    .select('*', { count: 'exact', head: true })
+    .eq('leaderboard_opt_in', true);
+
+  const { count: recordCount } = await supabase
+    .from('user_collection_cache')
+    .select('*', { count: 'exact', head: true });
+
+  const top = data?.[0] ?? null;
+  return {
+    collections: count ?? 0,
+    records: recordCount ?? 0,
+    topEntry: top ? { username: top.discogs_username, displayName: top.display_name, score: Number(top.avg_rarity_score) } : null,
+  };
+}
 
 const steps = [
   {
@@ -42,7 +73,9 @@ const features = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const { collections, records, topEntry } = await getCommunityStats();
+
   return (
     <>
       <Header />
@@ -61,8 +94,48 @@ export default function Home() {
             explore your year in vinyl, and compete on the global leaderboard.
           </p>
           <HeroCTA />
+
+          {/* Community stats */}
+          {collections > 0 && (
+            <p
+              className="text-white/30 text-xs mt-6 animate-fade-in-up"
+              style={{ animationDelay: '200ms' }}
+            >
+              {collections.toLocaleString()} collection{collections !== 1 ? 's' : ''} analyzed
+              {records > 0 && ` · ${records.toLocaleString()} records scored`}
+            </p>
+          )}
         </div>
       </section>
+
+      {/* Demo entry point — top collection preview */}
+      {topEntry && (
+        <div className="max-w-6xl mx-auto px-8 sm:px-16 pb-4">
+          <div className="border border-white/10 rounded-lg p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <p className="text-white/40 text-xs uppercase tracking-widest mb-1">Current leader</p>
+              <p className="text-white font-syne font-bold text-lg">
+                {topEntry.displayName ?? `@${topEntry.username}`}
+              </p>
+              <p className="text-white/40 text-sm">avg rarity {topEntry.score.toFixed(4)}</p>
+            </div>
+            <div className="flex gap-3">
+              <Link
+                href={`/collection/${encodeURIComponent(topEntry.username)}`}
+                className="px-4 py-2 text-sm text-white border border-white/20 rounded hover:border-white/50 transition-colors whitespace-nowrap"
+              >
+                See their collection
+              </Link>
+              <Link
+                href="/leaderboard"
+                className="px-4 py-2 text-sm text-white/50 hover:text-white/80 transition-colors whitespace-nowrap"
+              >
+                Full leaderboard →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* How it works */}
       <div className="max-w-6xl mx-auto px-8 sm:px-16 py-16">

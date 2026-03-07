@@ -61,6 +61,9 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const [communityAvg, setCommunityAvg] = useState<number | null>(null);
+  const [percentileRank, setPercentileRank] = useState<number | null>(null);
+
   const {
     enrichedReleases,
     loading: communityDataLoading,
@@ -115,6 +118,21 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
       setError(`Error loading community data: ${communityDataError}`);
     }
   }, [communityDataError, error]);
+
+  // Fetch community benchmark once we have the user's avg rarity score
+  useEffect(() => {
+    if (!stats) return;
+    const score = stats.averageRarityScore;
+    fetch(`/api/community-stats?score=${score}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && data.collectionsAnalyzed > 0) {
+          setCommunityAvg(data.avgRarityScore);
+          setPercentileRank(data.percentileRank);
+        }
+      })
+      .catch(() => { /* non-critical */ });
+  }, [stats?.averageRarityScore]);
 
   useEffect(() => {
     if (propUsername) {
@@ -534,7 +552,29 @@ export default function CollectionAnalysis({ username: propUsername }: Collectio
               <div className="bg-[#0a0a0a] border border-white/10 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-2">Collection Stats</h3>
                 <p><span className="font-medium">Total Records:</span> {stats.totalReleases}</p>
-                <p><span className="font-medium">Average Rarity Score:</span> {stats.averageRarityScore.toFixed(2)}</p>
+                <p><span className="font-medium">Avg Rarity Score:</span> {stats.averageRarityScore.toFixed(4)}</p>
+                {communityAvg !== null && (
+                  <div className="mt-2 pt-2 border-t border-white/10">
+                    {percentileRank !== null && percentileRank >= 50 && (
+                      <p className="text-sm font-semibold text-white">
+                        Top {100 - percentileRank}% of analyzed collections
+                      </p>
+                    )}
+                    {percentileRank !== null && percentileRank < 50 && (
+                      <p className="text-sm text-white/50">
+                        Bottom {percentileRank + 1}% of analyzed collections
+                      </p>
+                    )}
+                    <p className="text-xs text-white/40 mt-0.5">
+                      Community avg: {communityAvg.toFixed(4)}
+                      {communityAvg > 0 && (' · your collection is ' + (
+                        stats.averageRarityScore >= communityAvg
+                          ? `${(stats.averageRarityScore / communityAvg).toFixed(1)}× rarer`
+                          : `${(communityAvg / stats.averageRarityScore).toFixed(1)}× more common`
+                      ))}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
