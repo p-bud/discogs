@@ -121,10 +121,10 @@ export default async function Home() {
             </div>
             <div className="flex gap-3">
               <Link
-                href={`/collection/${encodeURIComponent(topEntry.username)}`}
+                href={`/wrapped/${encodeURIComponent(topEntry.username)}`}
                 className="px-4 py-2 text-sm text-white border border-white/20 rounded hover:border-white/50 transition-colors whitespace-nowrap"
               >
-                See their collection
+                See their Wrapped
               </Link>
               <Link
                 href="/leaderboard"
