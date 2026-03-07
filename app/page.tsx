@@ -81,7 +81,7 @@ export default function Home() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-12">
           {steps.map(({ number, title, description }) => (
             <div key={number}>
-              <span className="block text-[4rem] font-syne font-bold text-white/20 leading-none mb-4">
+              <span className="block text-[4rem] font-syne font-bold text-white/30 leading-none mb-4">
                 {number}
               </span>
               <h3 className="text-white font-syne font-bold text-lg uppercase tracking-wide mb-2">
