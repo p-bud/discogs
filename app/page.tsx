@@ -3,6 +3,24 @@ import Link from 'next/link';
 import Header from './components/Header';
 import ConnectButton from './components/ConnectButton';
 
+const steps = [
+  {
+    number: '01',
+    title: 'Connect',
+    description: 'Link your Discogs account in one click.',
+  },
+  {
+    number: '02',
+    title: 'Score',
+    description: 'Every record is ranked by rarity — how many people want it vs. own it.',
+  },
+  {
+    number: '03',
+    title: 'Compete',
+    description: 'See your rarest records, year-in-vinyl stats, and climb the global leaderboard.',
+  },
+];
+
 const features = [
   {
     href: '/collection',
@@ -32,9 +50,16 @@ export default function Home() {
       {/* Hero — full bleed, bottom-anchored, editorial */}
       <section className="min-h-[90vh] flex items-end bg-black px-8 sm:px-16 pb-20 overflow-hidden">
         <div className="w-full max-w-6xl">
-          <h2 className="text-[clamp(3rem,11vw,9rem)] font-syne font-bold uppercase leading-none tracking-tighter text-white mb-10 animate-fade-in-up">
-            Find the<br />Rarest Records
+          <h2 className="text-[clamp(3rem,11vw,9rem)] font-syne font-bold uppercase leading-none tracking-tighter text-white mb-6 animate-fade-in-up">
+            How Rare Is<br />Your Collection?
           </h2>
+          <p
+            className="text-white/50 text-sm max-w-md mb-10 leading-relaxed animate-fade-in-up"
+            style={{ animationDelay: '100ms' }}
+          >
+            Connect your Discogs account to rank every record you own by rarity,
+            explore your year in vinyl, and compete on the global leaderboard.
+          </p>
           <div
             className="flex flex-wrap items-center gap-6 animate-fade-in-up"
             style={{ animationDelay: '200ms' }}
@@ -49,6 +74,24 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* How it works */}
+      <div className="max-w-6xl mx-auto px-8 sm:px-16 py-16">
+        <p className="text-white/25 text-xs uppercase tracking-widest mb-12">How it works</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-12">
+          {steps.map(({ number, title, description }) => (
+            <div key={number}>
+              <span className="block text-[4rem] font-syne font-bold text-white/8 leading-none mb-4">
+                {number}
+              </span>
+              <h3 className="text-white font-syne font-bold text-lg uppercase tracking-wide mb-2">
+                {title}
+              </h3>
+              <p className="text-white/40 text-sm leading-relaxed">{description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Feature grid — editorial separator style */}
       <div className="max-w-6xl mx-auto px-8 sm:px-16 py-24">
