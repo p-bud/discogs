@@ -54,7 +54,7 @@ export default function Home() {
             How Rare Is<br />Your Collection?
           </h2>
           <p
-            className="text-white/50 text-sm max-w-md mb-10 leading-relaxed animate-fade-in-up"
+            className="text-white/60 text-sm max-w-md mb-10 leading-relaxed animate-fade-in-up"
             style={{ animationDelay: '100ms' }}
           >
             Connect your Discogs account to rank every record you own by rarity,
@@ -77,7 +77,7 @@ export default function Home() {
 
       {/* How it works */}
       <div className="max-w-6xl mx-auto px-8 sm:px-16 py-16">
-        <p className="text-white/25 text-xs uppercase tracking-widest mb-12">How it works</p>
+        <p className="text-white/40 text-xs uppercase tracking-widest mb-12">How it works</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-12">
           {steps.map(({ number, title, description }) => (
             <div key={number}>
@@ -87,7 +87,7 @@ export default function Home() {
               <h3 className="text-white font-syne font-bold text-lg uppercase tracking-wide mb-2">
                 {title}
               </h3>
-              <p className="text-white/40 text-sm leading-relaxed">{description}</p>
+              <p className="text-white/60 text-sm leading-relaxed">{description}</p>
             </div>
           ))}
         </div>
@@ -95,7 +95,7 @@ export default function Home() {
 
       {/* Feature grid — editorial separator style */}
       <div className="max-w-6xl mx-auto px-8 sm:px-16 py-24">
-        <p className="text-white/25 text-xs uppercase tracking-widest mb-12">What you can do</p>
+        <p className="text-white/40 text-xs uppercase tracking-widest mb-12">What you can do</p>
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-white/10">
           {features.map(({ href, title, description, delay }) => (
             <Link
@@ -107,7 +107,7 @@ export default function Home() {
               <h3 className="text-white font-syne font-bold text-xl mb-3 group-hover:text-white/60 transition-colors">
                 {title}
               </h3>
-              <p className="text-white/40 text-sm leading-relaxed">{description}</p>
+              <p className="text-white/60 text-sm leading-relaxed">{description}</p>
               <span className="inline-block mt-6 text-white/60 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                 →
               </span>
