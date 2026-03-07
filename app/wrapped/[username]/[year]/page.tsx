@@ -1,22 +1,20 @@
 import React from 'react';
 import Link from 'next/link';
-import Header from '../../components/Header';
-import WrappedView from '../../components/WrappedView';
-import { computeWrappedStats } from '../../utils/wrapped-stats';
-import { getSupabaseClient } from '../../utils/supabase';
-import { CollectionItem } from '../../models/types';
+import Header from '../../../components/Header';
+import WrappedView from '../../../components/WrappedView';
+import { computeWrappedStats } from '../../../utils/wrapped-stats';
+import { getSupabaseClient } from '../../../utils/supabase';
+import { CollectionItem } from '../../../models/types';
 
-export const revalidate = 3600; // ISR — re-render at most once per hour
-
-const DEFAULT_YEAR = new Date().getFullYear() - 1;
+export const revalidate = 3600;
 
 interface Props {
-  params: { username: string };
+  params: { username: string; year: string };
 }
 
 export async function generateMetadata({ params }: Props) {
   const username = decodeURIComponent(params.username);
-  const year = DEFAULT_YEAR;
+  const year = parseInt(params.year, 10);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://raerz.fyi';
   const ogImageUrl = `${appUrl}/api/og?username=${encodeURIComponent(username)}&year=${year}&type=wrapped`;
 
@@ -27,7 +25,7 @@ export async function generateMetadata({ params }: Props) {
       title: `@${username}'s ${year} in Records`,
       description: `Check out @${username}'s ${year} year-in-vinyl stats on raerz.`,
       images: [{ url: ogImageUrl, width: 1200, height: 630 }],
-      url: `${appUrl}/wrapped/${encodeURIComponent(username)}`,
+      url: `${appUrl}/wrapped/${encodeURIComponent(username)}/${year}`,
       type: 'website',
     },
     twitter: {
@@ -66,8 +64,21 @@ async function getCollectionFromCache(username: string): Promise<CollectionItem[
   }));
 }
 
-export default async function PublicWrappedPage({ params }: Props) {
+export default async function PublicWrappedYearPage({ params }: Props) {
   const username = decodeURIComponent(params.username);
+  const year = parseInt(params.year, 10);
+
+  if (isNaN(year) || year < 1900 || year > new Date().getFullYear()) {
+    return (
+      <div className="py-8">
+        <Header />
+        <div className="max-w-4xl mx-auto px-4 text-center py-24">
+          <p className="text-2xl font-picnic text-minimal-black mb-4">Invalid year</p>
+        </div>
+      </div>
+    );
+  }
+
   const items = await getCollectionFromCache(username);
 
   if (!items) {
@@ -90,7 +101,7 @@ export default async function PublicWrappedPage({ params }: Props) {
     );
   }
 
-  const stats = computeWrappedStats(items, DEFAULT_YEAR);
+  const stats = computeWrappedStats(items, year);
 
   return (
     <div className="py-8">
@@ -101,7 +112,7 @@ export default async function PublicWrappedPage({ params }: Props) {
         <div className="text-center pt-4 mb-8">
           <p className="text-minimal-gray-500 text-sm mb-1">@{username}&apos;s</p>
           <h1 className="text-4xl sm:text-5xl font-picnic text-minimal-black uppercase tracking-tight">
-            {DEFAULT_YEAR} in Records
+            {year} in Records
           </h1>
           <p className="text-xs text-minimal-gray-400 mt-3">
             Rarity scores update when the user visits their{' '}
