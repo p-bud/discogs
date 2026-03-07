@@ -94,7 +94,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
       role="dialog"
       aria-modal="true"
     >
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+      <div className="bg-white text-minimal-white rounded-lg shadow-xl w-full max-w-sm mx-4 overflow-hidden">
         {/* Tabs — only show signin / signup; forgot is a sub-view */}
         {view !== 'forgot' && (
           <div className="flex border-b">
