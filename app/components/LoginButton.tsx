@@ -116,8 +116,8 @@ const LoginButton: React.FC<LoginButtonProps> = ({ className = '' }) => {
     </svg>
   );
 
-  // Fully linked: show a single account button with a dropdown menu.
-  if (isFullyLinked) {
+  // Discogs connected (with or without Supabase): show a single username dropdown.
+  if (discogsConnected) {
     return (
       <div className={`relative ${className}`}>
         <button
@@ -126,7 +126,7 @@ const LoginButton: React.FC<LoginButtonProps> = ({ className = '' }) => {
           aria-haspopup="true"
           aria-expanded={showMenu}
         >
-          <span className="max-w-[140px] truncate">{discogsUsername ?? supabaseEmail}</span>
+          <span className="max-w-[140px] truncate">{discogsUsername}</span>
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
@@ -135,16 +135,26 @@ const LoginButton: React.FC<LoginButtonProps> = ({ className = '' }) => {
         {showMenu && (
           <div className="absolute right-0 mt-1 w-52 bg-[#0a0a0a] border border-white/10 rounded-lg shadow-lg z-10 py-1 text-sm">
             <div className="px-4 py-2 border-b border-white/10">
-              <p className="font-medium text-white truncate">{supabaseEmail}</p>
-              <p className="text-white/40 text-xs truncate">Discogs: {discogsUsername}</p>
+              <p className="font-medium text-white truncate">{discogsUsername}</p>
+              {supabaseEmail && <p className="text-white/40 text-xs truncate">{supabaseEmail}</p>}
             </div>
-            <Link
-              href="/account"
-              onClick={() => setShowMenu(false)}
-              className="block w-full px-4 py-2 hover:bg-white/5 text-white/60 hover:text-white"
-            >
-              Account settings
-            </Link>
+            {isFullyLinked && (
+              <Link
+                href="/account"
+                onClick={() => setShowMenu(false)}
+                className="block w-full px-4 py-2 hover:bg-white/5 text-white/60 hover:text-white"
+              >
+                Account settings
+              </Link>
+            )}
+            {!supabaseUserId && (
+              <button
+                onClick={() => { setShowMenu(false); setShowModal(true); }}
+                className="w-full text-left px-4 py-2 hover:bg-white/5 text-white/60 hover:text-white"
+              >
+                Save progress / Leaderboard
+              </button>
+            )}
             <button
               onClick={initiateDiscogsLogout}
               disabled={loading}
@@ -152,13 +162,15 @@ const LoginButton: React.FC<LoginButtonProps> = ({ className = '' }) => {
             >
               Disconnect Discogs
             </button>
-            <button
-              onClick={initiateSupabaseSignOut}
-              disabled={loading}
-              className="w-full text-left px-4 py-2 hover:bg-white/5 text-white/60 hover:text-white"
-            >
-              Sign out
-            </button>
+            {supabaseUserId && (
+              <button
+                onClick={initiateSupabaseSignOut}
+                disabled={loading}
+                className="w-full text-left px-4 py-2 hover:bg-white/5 text-white/60 hover:text-white"
+              >
+                Sign out
+              </button>
+            )}
           </div>
         )}
 
@@ -168,10 +180,9 @@ const LoginButton: React.FC<LoginButtonProps> = ({ className = '' }) => {
     );
   }
 
-  // Partial or no auth: show individual buttons.
+  // No Discogs: show sign in + connect buttons.
   return (
     <div className={`flex flex-wrap gap-2 items-center ${className}`}>
-      {/* Supabase account button */}
       {supabaseUserId ? (
         <button
           onClick={initiateSupabaseSignOut}
@@ -191,27 +202,14 @@ const LoginButton: React.FC<LoginButtonProps> = ({ className = '' }) => {
         </button>
       )}
 
-      {/* Discogs connect button */}
-      {discogsConnected ? (
-        <button
-          onClick={initiateDiscogsLogout}
-          disabled={loading}
-          className="btn-secondary px-3 py-2 text-sm rounded-md flex items-center"
-          title={`Discogs: ${discogsUsername}`}
-        >
-          {loading ? <Spinner /> : null}
-          {discogsUsername ?? 'Discogs'}
-        </button>
-      ) : (
-        <button
-          onClick={initiateDiscogsLogin}
-          disabled={loading}
-          className="btn-primary px-3 py-2 text-sm rounded-md shadow-sm flex items-center"
-        >
-          {loading ? <Spinner light /> : null}
-          {loading ? 'Connecting…' : 'Connect Discogs'}
-        </button>
-      )}
+      <button
+        onClick={initiateDiscogsLogin}
+        disabled={loading}
+        className="btn-primary px-3 py-2 text-sm rounded-md shadow-sm flex items-center"
+      >
+        {loading ? <Spinner light /> : null}
+        {loading ? 'Connecting…' : 'Connect Discogs'}
+      </button>
 
       {checkError && <div className="text-red-500 text-xs w-full">{checkError}</div>}
 
